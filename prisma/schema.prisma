@@ -1,0 +1,380 @@
+// Prisma Schema - Final Corrected Version
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////
+
+enum Role {
+  SUPER_ADMIN
+  SUPERVISOR
+}
+
+enum ProjectStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkerType {
+  PERMANENT
+  TEMPORARY
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_PAYMENT
+  CHECK
+  OTHER
+}
+
+enum PayeeType {
+  LABORER
+  SUPERVISOR
+  SUPPLIER
+  OTHER
+}
+
+//////////////////////////////////////////////////
+// USER
+//////////////////////////////////////////////////
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String?  @unique
+  role      Role     @default(SUPERVISOR)
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assignedProjects Project[]         @relation("SupervisorProjects")
+  createdRequests  MaterialRequest[] @relation("RequestCreatedBy")
+  paymentsMade     Payment[]         @relation("PaymentsMadeBy")
+
+  dailyReports       DailyReport[]
+  attendances        Attendance[]
+  laborRequests      LaborRequest[]
+  inventoryUsageLogs InventoryUsageLog[]
+
+  materialRequests MaterialRequest[]
+  payments         Payment[]
+}
+
+//////////////////////////////////////////////////
+// PROJECT
+//////////////////////////////////////////////////
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  clientName  String
+  clientPhone String
+  address     String?
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Decimal?      @db.Decimal(12, 2)
+  status      ProjectStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  assignedSupervisorId String?
+  assignedSupervisor   User?   @relation("SupervisorProjects", fields: [assignedSupervisorId], references: [id])
+
+  // Relations
+  documents         ProjectDocument[]
+  inventoryItems    InventoryItem[]
+  inventoryLogs     InventoryUsageLog[]
+  materialRequests  MaterialRequest[]
+  laborRequests     LaborRequest[]
+  dailyReports      DailyReport[]
+  attendanceRecords Attendance[]
+  payments          Payment[]
+  incomes           Income[]
+  expenses          Expense[]
+
+  @@index([assignedSupervisorId])
+}
+
+//////////////////////////////////////////////////
+// PROJECT DOCUMENTS
+//////////////////////////////////////////////////
+
+model ProjectDocument {
+  id         String   @id @default(cuid())
+  projectId  String
+  title      String?
+  url        String
+  fileType   String?
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+//////////////////////////////////////////////////
+// INVENTORY
+//////////////////////////////////////////////////
+
+model InventoryItem {
+  id              String   @id @default(cuid())
+  projectId       String
+  name            String
+  category        String?
+  unit            String?
+  quantity        Float    @default(0)
+  initialQuantity Float?
+  threshold       Float?
+  unitCost        Decimal? @db.Decimal(12, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  usageLogs            InventoryUsageLog[]
+  materialRequestItems MaterialRequestItem[]
+
+  @@index([projectId])
+}
+
+model InventoryUsageLog {
+  id              String   @id @default(cuid())
+  inventoryItemId String
+  projectId       String
+  supervisorId    String?
+  quantity        Float
+  note            String?
+  createdAt       DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supervisor    User?         @relation(fields: [supervisorId], references: [id])
+
+  @@index([inventoryItemId])
+  @@index([projectId])
+}
+
+//////////////////////////////////////////////////
+// MATERIAL REQUESTS
+//////////////////////////////////////////////////
+
+model MaterialRequest {
+  id            String        @id @default(cuid())
+  projectId     String
+  supervisorId  String
+  status        RequestStatus @default(PENDING)
+  note          String?
+  adminResponse String?
+  respondedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supervisor User    @relation("RequestCreatedBy", fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  items  MaterialRequestItem[]
+  user   User?                 @relation(fields: [userId], references: [id])
+  userId String?
+
+  @@index([projectId])
+  @@index([supervisorId])
+}
+
+model MaterialRequestItem {
+  id                String   @id @default(cuid())
+  materialRequestId String
+  inventoryItemId   String?
+  name              String
+  quantity          Float
+  unit              String?
+  unitCost          Decimal? @db.Decimal(10, 2)
+  totalCost         Decimal? @db.Decimal(12, 2)
+
+  materialRequest MaterialRequest @relation(fields: [materialRequestId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem?  @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([materialRequestId])
+  @@index([inventoryItemId])
+}
+
+//////////////////////////////////////////////////
+// LABOR
+//////////////////////////////////////////////////
+
+model Laborer {
+  id         String     @id @default(cuid())
+  name       String
+  nic        String?    @unique
+  phone      String?    @unique
+  workerType WorkerType @default(TEMPORARY)
+  status     Boolean    @default(true)
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  attendance Attendance[]
+  payments   Payment[]    @relation("LaborerPayments")
+
+  @@index([phone])
+}
+
+model Attendance {
+  id           String    @id @default(cuid())
+  laborerId    String
+  supervisorId String
+  projectId    String
+  date         DateTime
+  checkIn      DateTime?
+  checkOut     DateTime?
+  hoursWorked  Float?
+  geoLocation  String?
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  laborer    Laborer @relation(fields: [laborerId], references: [id], onDelete: Cascade)
+  supervisor User    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([laborerId, date])
+  @@index([laborerId])
+  @@index([supervisorId])
+  @@index([date])
+}
+
+//////////////////////////////////////////////////
+// LABOR REQUESTS
+//////////////////////////////////////////////////
+
+model LaborRequest {
+  id            String        @id @default(cuid())
+  projectId     String
+  supervisorId  String
+  requestedType String
+  quantity      Int
+  daysRequired  Int?
+  status        RequestStatus @default(PENDING)
+  note          String?
+  adminResponse String?
+  respondedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supervisor User    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([supervisorId])
+}
+
+//////////////////////////////////////////////////
+// DAILY REPORTS
+//////////////////////////////////////////////////
+
+model DailyReport {
+  id           String   @id @default(cuid())
+  projectId    String
+  supervisorId String
+  note         String?
+  weather      String?
+  createdAt    DateTime @default(now())
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supervisor User               @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  photos     DailyReportPhoto[]
+
+  @@index([projectId])
+  @@index([supervisorId])
+}
+
+model DailyReportPhoto {
+  id            String   @id @default(cuid())
+  dailyReportId String
+  url           String
+  caption       String?
+  createdAt     DateTime @default(now())
+
+  dailyReport DailyReport @relation(fields: [dailyReportId], references: [id], onDelete: Cascade)
+
+  @@index([dailyReportId])
+}
+
+//////////////////////////////////////////////////
+// FINANCIAL MODELS
+//////////////////////////////////////////////////
+
+model Payment {
+  id           String        @id @default(cuid())
+  projectId    String?
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod @default(CASH)
+  payeeType    PayeeType
+  laborerId    String?
+  supervisorId String?
+  supplierName String?
+  reference    String?
+  note         String?
+  paidAt       DateTime      @default(now())
+  createdById  String?
+  createdAt    DateTime      @default(now())
+
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  laborer    Laborer? @relation("LaborerPayments", fields: [laborerId], references: [id], onDelete: Cascade)
+  supervisor User?    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  createdBy  User?    @relation("PaymentsMadeBy", fields: [createdById], references: [id])
+
+  @@index([projectId])
+  @@index([laborerId])
+  @@index([supervisorId])
+  @@index([paidAt])
+}
+
+model Income {
+  id         String   @id @default(cuid())
+  projectId  String
+  amount     Decimal  @db.Decimal(12, 2)
+  source     String?
+  receivedAt DateTime @default(now())
+  note       String?
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([receivedAt])
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  projectId String?
+  amount    Decimal  @db.Decimal(12, 2)
+  category  String?
+  note      String?
+  spentAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([spentAt])
+}
