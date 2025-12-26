@@ -59,11 +59,11 @@ enum PayeeType {
 
 model User {
   id        String   @id @default(cuid())
+  clerkId   String   @unique
   name      String
   email     String?  @unique
   phone     String?  @unique
   role      Role     @default(SUPERVISOR)
-  password  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
