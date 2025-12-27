@@ -1,13 +1,15 @@
 "use client"
 
-import ScrollableTable from '@/components/ScrollableTable'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import React from 'react'
+import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
+import ScrollableTable from "@/components/ScrollableTable"
+import ShowDocumentDialog, { DocumentItem } from "../ShowDocumentDialog"
+
 
 // Mock data
 const mockProject = {
@@ -52,18 +54,22 @@ const mockFinancials = {
     expense: 162500,
 }
 
-/* Currency formatter */
+const mockDocuments: DocumentItem[] = [
+    { id: "1", title: "Project Proposal", link: "/documents/project-proposal.pdf", uploadDate: "2024-01-15" },
+    { id: "2", title: "Site Survey Report", link: "/documents/site-survey.pdf", uploadDate: "2024-01-16" },
+    { id: "3", title: "Budget Breakdown", link: "/documents/budget-breakdown.pdf", uploadDate: "2024-01-17" },
+    { id: "4", title: "Design Plans", link: "/documents/design-plans.pdf", uploadDate: "2024-01-18" },
+]
+
+// Currency formatter
 const formatCurrency = (amount?: number | null) => {
     if (amount == null) return "—"
-    return new Intl.NumberFormat("si-LK", {
-        style: "currency",
-        currency: "LKR",
-        maximumFractionDigits: 0,
-    }).format(amount)
+    return new Intl.NumberFormat("si-LK", { style: "currency", currency: "LKR", maximumFractionDigits: 0 }).format(amount)
 }
 
+export default function SingleProjectView() {
+    const [documents, setDocuments] = useState<DocumentItem[]>(mockDocuments)
 
-function SigngleProectView({ params }: { params: { id: string } }) {
     return (
         <div className="p-8 space-y-6">
             {/* Back Button */}
@@ -82,9 +88,7 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                             <CardTitle className="text-3xl">{mockProject.name}</CardTitle>
                             <CardDescription className="mt-2 text-base">{mockProject.description}</CardDescription>
                         </div>
-                        <Badge className="bg-green-600">
-                            {mockProject.status.charAt(0).toUpperCase() + mockProject.status.slice(1)}
-                        </Badge>
+                        <Badge className="bg-green-600">{mockProject.status.charAt(0).toUpperCase() + mockProject.status.slice(1)}</Badge>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -120,7 +124,10 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                 </CardContent>
             </Card>
 
-            {/* Inventory Overview */}
+            {/* Document Dialog */}
+            <ShowDocumentDialog documents={documents} setDocuments={setDocuments} />
+
+            {/* Inventory */}
             <Card className="border-border shadow-sm">
                 <CardHeader>
                     <CardTitle>Inventory Overview</CardTitle>
@@ -168,23 +175,19 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {mockMaterialRequests.map((request) => (
-                                    <TableRow key={request.id}>
-                                        <TableCell>{request.item}</TableCell>
-                                        <TableCell>{request.quantity}</TableCell>
+                                {mockMaterialRequests.map(req => (
+                                    <TableRow key={req.id}>
+                                        <TableCell>{req.item}</TableCell>
+                                        <TableCell>{req.quantity}</TableCell>
                                         <TableCell>
                                             <Badge
-                                                variant={request.status === "approved" ? "default" : "secondary"}
-                                                className={
-                                                    request.status === "approved"
-                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                                }
+                                                variant={req.status === "approved" ? "default" : "secondary"}
+                                                className={req.status === "approved" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
                                             >
-                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                                {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{request.date}</TableCell>
+                                        <TableCell>{req.date}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -212,24 +215,20 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {mockLabourRequests.map((request) => (
-                                    <TableRow key={request.id}>
-                                        <TableCell>{request.name}</TableCell>
-                                        <TableCell>{request.hours}</TableCell>
-                                        <TableCell>{request.role}</TableCell>
+                                {mockLabourRequests.map(req => (
+                                    <TableRow key={req.id}>
+                                        <TableCell>{req.name}</TableCell>
+                                        <TableCell>{req.hours}</TableCell>
+                                        <TableCell>{req.role}</TableCell>
                                         <TableCell>
                                             <Badge
-                                                variant={request.status === "approved" ? "default" : "secondary"}
-                                                className={
-                                                    request.status === "approved"
-                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                                }
+                                                variant={req.status === "approved" ? "default" : "secondary"}
+                                                className={req.status === "approved" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
                                             >
-                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                                {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{request.date}</TableCell>
+                                        <TableCell>{req.date}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -246,6 +245,7 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Budget Overview */}
                         <div className="space-y-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950">
                             <h3 className="font-semibold text-blue-900 dark:text-blue-100">Budget Overview</h3>
                             <div className="space-y-3">
@@ -265,6 +265,7 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                             </div>
                         </div>
 
+                        {/* Income vs Expense */}
                         <div className="space-y-4 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950">
                             <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Income vs Expense</h3>
                             <div className="space-y-3">
@@ -279,9 +280,7 @@ function SigngleProectView({ params }: { params: { id: string } }) {
                                 <div className="h-px bg-border" />
                                 <div className="flex justify-between">
                                     <span className="text-sm font-medium">Net</span>
-                                    <span className="font-bold text-red-600">
-                                        {formatCurrency(mockFinancials.income - mockFinancials.expense)}
-                                    </span>
+                                    <span className="font-bold text-red-600">{formatCurrency(mockFinancials.income - mockFinancials.expense)}</span>
                                 </div>
                             </div>
                         </div>
@@ -291,5 +290,3 @@ function SigngleProectView({ params }: { params: { id: string } }) {
         </div>
     )
 }
-
-export default SigngleProectView
