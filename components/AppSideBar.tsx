@@ -10,7 +10,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { BrickWall, Calendar, ChevronUp, CircleDollarSign, Home, Inbox, Pickaxe, Search, Settings, Store, User, User2, Workflow } from "lucide-react"
+import { BrickWall, Calendar, ChevronUp, CircleDollarSign, CreditCard, Home, Inbox, Pickaxe, Search, Settings, Store, User, User2, Workflow } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
@@ -57,6 +57,11 @@ const items = [
         title: "Finance",
         url: "/admin/finance",
         icon: CircleDollarSign,
+    },
+    {
+        title: "Payments",
+        url: "/admin/payments",
+        icon: CreditCard,
     },
 
 ]

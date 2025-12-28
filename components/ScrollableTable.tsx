@@ -1,7 +1,25 @@
 import React from 'react'
 
-const ScrollableTable = ({ children }: { children: React.ReactNode }) => (
-    <div className="max-h-[144px] overflow-y-auto scrollbar-hide">{children}</div>
-)
+type ScrollableTableProps = {
+    children: React.ReactNode;
+    maxHeight?: number | string;
+}
+
+const ScrollableTable = ({
+    children,
+    maxHeight = 144, // default value
+}: ScrollableTableProps) => {
+    return (
+        <div
+            className='overflow-y-auto scrollbar-hide'
+            style={{
+                maxHeight:
+                    typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
+            }}
+        >
+            {children}
+        </div>
+    );
+}
 
 export default ScrollableTable

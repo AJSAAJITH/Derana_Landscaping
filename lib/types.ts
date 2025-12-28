@@ -87,6 +87,7 @@ export interface InventoryItem {
     updatedAt: Date
 }
 
+
 // Material Request Item Type
 export interface MaterialRequestItem {
     id: string
@@ -97,6 +98,16 @@ export interface MaterialRequestItem {
     unit?: string | null
     unitCost?: number | null
     totalCost?: number | null
+}
+
+export type UserForMaterialrequest = {
+    id: string,
+    name: string,
+    email?: string,
+}
+export type ProjectForMeterials = {
+    id: string,
+    name: string,
 }
 
 // Material Request Type
@@ -111,9 +122,43 @@ export interface MaterialRequest {
     createdAt: Date
     updatedAt: Date
     items: MaterialRequestItem[]
-    supervisor?: User
-    project?: Project
+    supervisor?: UserForMaterialrequest
+    project?: ProjectForMeterials
 }
+
+// UI Item
+export interface MaterialRequestItemUI {
+    id: string
+    name: string
+    quantity: number
+    unit?: string
+    unitCost?: number
+    totalCost?: number
+}
+
+//UI Request
+export interface MaterialRequestUI {
+    id: string
+    status: RequestStatus
+    note?: string
+    adminResponse?: string
+    createdAt: Date
+
+    supervisor?: {
+        id: string
+        name: string
+        email?: string
+    }
+
+    project?: {
+        id: string
+        name: string
+    }
+
+    items: MaterialRequestItemUI[]
+}
+
+
 
 // Labor Request Type
 export interface LaborRequest {
