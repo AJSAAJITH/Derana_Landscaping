@@ -39,11 +39,6 @@ const items = [
         icon: Workflow,
     },
     {
-        title: "Inventory",
-        url: "/admin/inventory",
-        icon: Store,
-    },
-    {
         title: "Materials",
         url: "/admin/materials",
         icon: BrickWall,

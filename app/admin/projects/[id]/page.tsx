@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, FileText } from "lucide-react"
 import Link from "next/link"
 import ScrollableTable from "@/components/ScrollableTable"
 import ShowDocumentDialog, { DocumentItem } from "../ShowDocumentDialog"
@@ -129,9 +129,17 @@ export default function SingleProjectView() {
 
             {/* Inventory */}
             <Card className="border-border shadow-sm">
-                <CardHeader>
-                    <CardTitle>Inventory Overview</CardTitle>
-                    <CardDescription>Current materials allocated to this project</CardDescription>
+                <CardHeader className="flex flex-col lg:flex-row items-center justify-between space-y-0">
+                    <div>
+                        <CardTitle>Inventory Overview</CardTitle>
+                        <CardDescription>Current materials allocated to this project</CardDescription>
+                    </div>
+                    <Link href={`/admin/inventory?project=${mockProject.id}`}>
+                        <Button className="gap-2 bg-green-600 hover:bg-green-700 sm:w-100 lg:w-auto">
+                            <FileText className="w-4 h-4" />
+                            Explore Items
+                        </Button>
+                    </Link>
                 </CardHeader>
                 <CardContent className="p-0">
                     <ScrollableTable>

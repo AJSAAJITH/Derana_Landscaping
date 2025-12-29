@@ -1,8 +1,11 @@
-import React from 'react'
+import React, { Suspense } from 'react'
+import InventoryClient from './inventory-client'
 
 function Inventory() {
     return (
-        <div>Inventory</div>
+        <Suspense fallback={null}>
+            <InventoryClient />
+        </Suspense>
     )
 }
 
