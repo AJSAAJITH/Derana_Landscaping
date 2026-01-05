@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Trash2, Eye, CirclePower } from "lucide-react";
 import ScrollableTable from "@/components/ScrollableTable";
+import Link from "next/link";
 
 type Props = {
     laborers: Laborer[];
@@ -96,11 +97,14 @@ export default function LaborTable({ laborers, onDelete, onToggleStatus }: Props
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        <span>View Details</span>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/admin/labours/${laborer.id}`}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            <span>View Details</span>
+                                                        </Link>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => onToggleStatus(laborer.id)}>
+                                                        <CirclePower className="mr-2 h-4 w-4" />
                                                         <span>{laborer.status ? "Deactivate" : "Activate"}</span>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem variant="destructive" onClick={() => onDelete(laborer.id)}>

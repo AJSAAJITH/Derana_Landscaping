@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUp, SignUpButton, UserButton } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
+import PageNavbar from "@/components/PageNavbar";
 
 
 const geistSans = Geist({
@@ -37,6 +38,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <div className="p-4">
+              <PageNavbar />
               {children}
             </div>
 

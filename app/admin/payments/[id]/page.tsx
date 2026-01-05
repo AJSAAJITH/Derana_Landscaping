@@ -1,252 +1,290 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Download, ChevronLeft } from "lucide-react"
-import ScrollableTable from "@/components/ScrollableTable"
-import Link from "next/link"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Eye, Trash2, Plus, History } from "lucide-react"
 
-// Sample payment history data
-const paymentHistoryData = [
+/* ------------------ TYPES ------------------ */
+
+type PayeeType = "LABORER" | "SUPERVISOR" | "SUPPLIER" | "OTHER"
+
+/* ------------------ CONSTANTS ------------------ */
+
+const PAYEE_TYPE_LABELS: Record<PayeeType, string> = {
+    LABORER: "Laborer",
+    SUPERVISOR: "Supervisor",
+    SUPPLIER: "Supplier",
+    OTHER: "Other",
+}
+
+const PAYEE_TYPE_COLORS: Record<PayeeType, string> = {
+    LABORER: "bg-blue-100 text-blue-800",
+    SUPERVISOR: "bg-purple-100 text-purple-800",
+    SUPPLIER: "bg-orange-100 text-orange-800",
+    OTHER: "bg-slate-100 text-slate-800",
+}
+
+/* ------------------ SAMPLE DATA ------------------ */
+
+const samplePayees: { name: string; type: PayeeType }[] = [
+    { name: "John Smith", type: "LABORER" },
+    { name: "Sarah Johnson", type: "SUPERVISOR" },
+    { name: "Green Materials Inc", type: "SUPPLIER" },
+    { name: "Mike Wilson", type: "LABORER" },
+    { name: "Emma Davis", type: "LABORER" },
+]
+
+const paymentsData = [
     {
         id: 1,
         date: "2024-01-15",
-        payeeType: "Laborer",
+        projectName: "Central Park Landscaping",
+        payeeType: "LABORER" as PayeeType,
         payeeName: "John Smith",
         amount: 1500,
-        method: "Bank Transfer",
         reference: "PAY-2024-001",
-        note: "Weekly wages for landscaping work",
     },
     {
         id: 2,
-        date: "2024-01-22",
-        payeeType: "Laborer",
-        amount: 1500,
-        payeeName: "John Smith",
-        method: "Bank Transfer",
-        reference: "PAY-2024-007",
-        note: "Weekly wages for landscaping work",
-    },
-    {
-        id: 3,
-        date: "2024-02-05",
-        payeeType: "Laborer",
-        amount: 1500,
-        payeeName: "John Smith",
-        method: "Bank Transfer",
-        reference: "PAY-2024-012",
-        note: "Weekly wages for landscaping work",
-    },
-    {
-        id: 4,
-        date: "2024-02-12",
-        payeeType: "Laborer",
-        amount: 1500,
-        payeeName: "John Smith",
-        method: "Bank Transfer",
-        reference: "PAY-2024-015",
-        note: "Weekly wages for landscaping work",
-    },
-    {
-        id: 5,
-        date: "2024-02-19",
-        payeeType: "Laborer",
-        amount: 1500,
-        payeeName: "John Smith",
-        method: "Check",
-        reference: "PAY-2024-021",
-        note: "Weekly wages for landscaping work",
-    },
-    {
-        id: 6,
-        date: "2024-02-26",
-        payeeType: "Laborer",
-        amount: 1500,
-        payeeName: "John Smith",
-        method: "Bank Transfer",
-        reference: "PAY-2024-025",
-        note: "Weekly wages for landscaping work",
+        date: "2024-01-18",
+        projectName: "Downtown Plaza Renovation",
+        payeeType: "SUPERVISOR" as PayeeType,
+        payeeName: "Sarah Johnson",
+        amount: 3500,
+        reference: "PAY-2024-002",
     },
 ]
 
-const projectName = "Central Park Landscaping"
-const payeeName = "John Smith"
+/* ------------------ COMPONENT ------------------ */
 
-export default function PaymentDetailPage({ params }: { params: { id: string } }) {
-    const [dateRangeFrom, setDateRangeFrom] = useState("2024-01-01")
-    const [dateRangeTo, setDateRangeTo] = useState("2024-02-29")
+export default function PaymentsPage() {
+    const router = useRouter()
 
-    const filteredPayments = paymentHistoryData.filter((payment) => {
-        const paymentDate = new Date(payment.date)
-        const fromDate = new Date(dateRangeFrom)
-        const toDate = new Date(dateRangeTo)
-        return paymentDate >= fromDate && paymentDate <= toDate
+    const [payments, setPayments] = useState(paymentsData)
+
+    const [searchTerm, setSearchTerm] = useState("")
+    const [selectedPayeeType, setSelectedPayeeType] = useState<PayeeType | "all">("all")
+
+    const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false)
+
+    // 👉 AUTOCOMPLETE STATES (CORRECT & CONSISTENT)
+    const [payeeName, setPayeeName] = useState("")
+    const [payeeType, setPayeeType] = useState<PayeeType | null>(null)
+    const [showPayeeDropdown, setShowPayeeDropdown] = useState(false)
+
+    /* ------------------ AUTOCOMPLETE LOGIC ------------------ */
+
+    const filteredPayees = useMemo(() => {
+        if (!payeeName.trim()) return []
+
+        return samplePayees.filter((p) => {
+            const nameMatch = p.name.toLowerCase().includes(payeeName.toLowerCase())
+            const typeMatch = payeeType ? p.type === payeeType : true
+            return nameMatch && typeMatch
+        })
+    }, [payeeName, payeeType])
+
+    /* ------------------ TABLE FILTER ------------------ */
+
+    const filteredPayments = payments.filter((p) => {
+        const searchMatch =
+            p.payeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+
+        const typeMatch =
+            selectedPayeeType === "all" || p.payeeType === selectedPayeeType
+
+        return searchMatch && typeMatch
     })
 
-    const totalPayments = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
-    const averagePayment = filteredPayments.length > 0 ? totalPayments / filteredPayments.length : 0
+    const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
+
+    /* ------------------ UI ------------------ */
 
     return (
-        <div className="flex flex-col gap-4 p-4 sm:gap-6 sm:p-6">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600">
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 -ml-2">
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span><Link href={"/admin/finance"}>Finance</Link></span>
-                <span>/</span>
-                <span><Link href={"/admin/payments"}>Payments</Link></span>
-                <span>/</span>
-                <span className="text-gray-900 font-medium">Details</span>
-            </div>
+        <div className="p-6 space-y-6">
 
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Payment History</h1>
-                <p className="text-sm sm:text-base text-gray-500 mt-1">Detailed payment records for {payeeName}</p>
-            </div>
+            {/* HEADER */}
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold">Payments</h1>
 
-            {/* Summary Card */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">Payment Summary</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                        Overview of payments within the selected date range
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                        <div className="border-l-4 border-emerald-600 pl-3">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600">Project Name</p>
-                            <p className="text-base sm:text-lg font-bold text-gray-900 truncate">{projectName}</p>
-                        </div>
-                        <div className="border-l-4 border-blue-600 pl-3">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600">Payee Name</p>
-                            <p className="text-base sm:text-lg font-bold text-gray-900 truncate">{payeeName}</p>
-                        </div>
-                        <div className="border-l-4 border-purple-600 pl-3">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600">Total Payments</p>
-                            <p className="text-base sm:text-lg font-bold text-gray-900">{filteredPayments.length}</p>
-                        </div>
-                        <div className="border-l-4 border-green-600 pl-3">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600">Total Amount</p>
-                            <p className="text-base sm:text-lg font-bold text-emerald-600">${totalPayments.toLocaleString()}</p>
-                        </div>
-                        <div className="border-l-4 border-orange-600 pl-3">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600">Average Payment</p>
-                            <p className="text-base sm:text-lg font-bold text-gray-900">
-                                ${averagePayment.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                            </p>
-                        </div>
-                        <div className="flex items-end">
-                            <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700 h-9 sm:h-10">
-                                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                                <span className="hidden sm:inline">Export</span>
+                <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="bg-emerald-600 hover:bg-emerald-700">
+                            <Plus className="h-4 w-4 mr-2" /> Add Payment
+                        </Button>
+                    </DialogTrigger>
+
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add Payment</DialogTitle>
+                            <DialogDescription>Create a new payment record</DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
+
+                            {/* PAYEE TYPE */}
+                            <div>
+                                <Label>Payee Type</Label>
+                                <Select
+                                    value={payeeType ?? ""}
+                                    onValueChange={(v) => setPayeeType(v as PayeeType)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(PAYEE_TYPE_LABELS).map(([key, label]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* PAYEE NAME AUTOCOMPLETE */}
+                            <div className="relative">
+                                <Label>Payee Name</Label>
+
+                                <Input
+                                    value={payeeName}
+                                    placeholder="Type to search..."
+                                    autoComplete="off"
+                                    onChange={(e) => {
+                                        setPayeeName(e.target.value)
+                                        setShowPayeeDropdown(true)
+                                    }}
+                                    onFocus={() => setShowPayeeDropdown(true)}
+                                    onBlur={() => {
+                                        setTimeout(() => setShowPayeeDropdown(false), 150)
+                                    }}
+                                />
+
+                                {showPayeeDropdown && filteredPayees.length > 0 && (
+                                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow max-h-48 overflow-y-auto">
+                                        {filteredPayees.map((p) => (
+                                            <button
+                                                key={p.name}
+                                                type="button"
+                                                className="w-full px-3 py-2 text-left hover:bg-slate-100"
+                                                onMouseDown={() => {
+                                                    setPayeeName(p.name)
+                                                    setPayeeType(p.type)
+                                                    setShowPayeeDropdown(false)
+                                                }}
+                                            >
+                                                <div className="font-medium">{p.name}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {PAYEE_TYPE_LABELS[p.type]}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+                                Save Payment
                             </Button>
                         </div>
-                    </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            {/* SUMMARY */}
+            <Card>
+                <CardContent className="pt-6">
+                    <p className="text-2xl font-bold text-emerald-600">
+                        Total: LKR {totalAmount.toLocaleString()}
+                    </p>
                 </CardContent>
             </Card>
 
-            {/* Date Range Filter */}
+            {/* TABLE */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">Filter by Date Range</CardTitle>
+                    <CardTitle>Payment Records</CardTitle>
+                    <CardDescription>{filteredPayments.length} records</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                        <div className="flex-1">
-                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">From Date</label>
-                            <Input
-                                type="date"
-                                value={dateRangeFrom}
-                                onChange={(e) => setDateRangeFrom(e.target.value)}
-                                className="h-9 sm:h-10"
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">To Date</label>
-                            <Input
-                                type="date"
-                                value={dateRangeTo}
-                                onChange={(e) => setDateRangeTo(e.target.value)}
-                                className="h-9 sm:h-10"
-                            />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
 
-            {/* Payment History Table */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">Payment History</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                        {filteredPayments.length} payment{filteredPayments.length !== 1 ? "s" : ""} in this date range
-                    </CardDescription>
-                </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                        <ScrollableTable maxHeight={250}>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="text-xs sm:text-sm">Date</TableHead>
-                                        <TableHead className="text-xs sm:text-sm">Payee Type</TableHead>
-                                        <TableHead className="text-xs sm:text-sm">Payee Name</TableHead>
-                                        <TableHead className="text-right text-xs sm:text-sm">Amount</TableHead>
-                                        <TableHead className="text-xs sm:text-sm">Payment Method</TableHead>
-                                        <TableHead className="text-xs sm:text-sm">Reference</TableHead>
-                                        <TableHead className="text-xs sm:text-sm">Note</TableHead>
-                                    </TableRow>
-                                </TableHeader>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Project</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Payee</TableHead>
+                                <TableHead className="text-right">Amount</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
 
-                                <TableBody>
-                                    {filteredPayments.length > 0 ? (
-                                        filteredPayments.map((payment) => (
-                                            <TableRow key={payment.id}>
-                                                <TableCell className="text-xs sm:text-sm font-medium whitespace-nowrap">
-                                                    {new Date(payment.date).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        className={`text-xs sm:text-sm ${payment.payeeType === "Laborer"
-                                                            ? "bg-blue-100 text-blue-800"
-                                                            : payment.payeeType === "Supervisor"
-                                                                ? "bg-purple-100 text-purple-800"
-                                                                : "bg-orange-100 text-orange-800"
-                                                            }`}
-                                                    >
-                                                        {payment.payeeType}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-xs sm:text-sm">{payment.payeeName}</TableCell>
-                                                <TableCell className="text-right font-semibold text-emerald-600 text-xs sm:text-sm whitespace-nowrap">
-                                                    ${payment.amount.toLocaleString()}
-                                                </TableCell>
-                                                <TableCell className="text-xs sm:text-sm">{payment.method}</TableCell>
-                                                <TableCell className="text-xs sm:text-sm font-mono text-gray-600">{payment.reference}</TableCell>
-                                                <TableCell className="text-xs sm:text-sm text-gray-600 max-w-xs truncate">
-                                                    {payment.note}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-6 sm:py-8 text-xs sm:text-sm text-gray-500">
-                                                No payments found in the selected date range
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </ScrollableTable>
-                    </div>
+                        <TableBody>
+                            {filteredPayments.map((p) => (
+                                <TableRow key={p.id}>
+                                    <TableCell>{new Date(p.date).toLocaleDateString()}</TableCell>
+                                    <TableCell>{p.projectName}</TableCell>
+                                    <TableCell>
+                                        <Badge className={PAYEE_TYPE_COLORS[p.payeeType]}>
+                                            {PAYEE_TYPE_LABELS[p.payeeType]}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{p.payeeName}</TableCell>
+                                    <TableCell className="text-right font-semibold">
+                                        LKR {p.amount.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-2">
+                                        <Button size="sm" variant="ghost" onClick={() => router.push(`/admin/payments/${p.id}`)}>
+                                            <History className="h-4 w-4" />
+                                        </Button>
+                                        <Button size="sm" variant="ghost">
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="text-red-600">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </div>
