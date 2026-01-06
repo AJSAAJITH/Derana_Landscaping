@@ -20,42 +20,42 @@ import { Separator } from "./ui/separator"
 const items = [
     {
         title: "Home",
-        url: "/admin/dashboard",
+        url: "/dashboard/admin",
         icon: Home,
     },
     {
         title: "Users",
-        url: "/admin/user",
+        url: "/dashboard/admin/user",
         icon: User,
     },
     {
         title: "Calendar",
-        url: "/admin/calender",
+        url: "/dashboard/admin/calender",
         icon: Calendar,
     },
     {
         title: "Projects",
-        url: "/admin/projects",
+        url: "/dashboard/admin/projects",
         icon: Workflow,
     },
     {
         title: "Materials",
-        url: "/admin/materials",
+        url: "/dashboard/admin/materials",
         icon: BrickWall,
     },
     {
         title: "Labours",
-        url: "/admin/labours",
+        url: "/dashboard/admin/labours",
         icon: Pickaxe,
     },
     {
         title: "Finance",
-        url: "/admin/finance",
+        url: "/dashboard/admin/finance",
         icon: CircleDollarSign,
     },
     {
         title: "Payments",
-        url: "/admin/payments",
+        url: "/dashboard/admin/payments",
         icon: CreditCard,
     },
 
@@ -68,7 +68,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild>
-                            <Link href="/admin/dashboard" className="flex items-center gap-2">
+                            <Link href="/dashboard/admin" className="flex items-center gap-2">
                                 <Avatar>
                                     <AvatarImage src="https://github.com/evilrabbit.png" className='' />
                                     <AvatarFallback>DL</AvatarFallback>

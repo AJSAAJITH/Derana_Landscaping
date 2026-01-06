@@ -1,9 +1,5 @@
 "use client"
-import React from 'react'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Users, Briefcase, AlertTriangle, Clock } from "lucide-react"
 import { MonthlyIncomeExpenseAreaChart } from '@/components/charts/LineChrt'
 import TotalProjectCard from '@/components/cards/Admin_TotalProject'
 import ActiveProjects from '@/components/cards/Admin_ActiveProject'

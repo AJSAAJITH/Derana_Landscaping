@@ -38,7 +38,6 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <div className="p-4">
-              <PageNavbar />
               {children}
             </div>
 

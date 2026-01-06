@@ -7,16 +7,18 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { LogOut, Settings, User } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { ModeToggle } from './ThemeToggleMode'
+import { SignedOut, useClerk } from '@clerk/nextjs'
 
-function AdminNavBar() {
+function UserNavBar() {
     const { setTheme } = useTheme()
+    const { signOut } = useClerk();
     return (
         <nav className='px-4 py-4 flex items-center justify-between sticky top-0 z-10 bg-background'>
             {/* Life */}
             <SidebarTrigger />
             {/* Right */}
             <div className='flex items-center gap-4'>
-                <Link href="/admin/dashboard">Dashboard</Link>
+                <Link href="/dashboard/admin">Dashboard</Link>
                 {/* Theme Menu */}
                 <ModeToggle />
                 {/* Acount Menu */}
@@ -38,7 +40,7 @@ function AdminNavBar() {
                             <Settings className='h-[1.2rem] w-[1.2rem] mr-2' />
                             Settings
                         </DropdownMenuItem>
-                        <DropdownMenuItem variant='destructive'>
+                        <DropdownMenuItem variant='destructive' onClick={() => signOut({ redirectUrl: "/" })}>
                             <LogOut className='h-[1.2rem] w-[1.2rem] mr-2' />
                             Logout
                         </DropdownMenuItem>
@@ -50,4 +52,4 @@ function AdminNavBar() {
 
 }
 
-export default AdminNavBar
+export default UserNavBar;
