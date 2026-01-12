@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { WorkerType } from "@/lib/types";
+import { toast } from "react-toastify";
+
 
 export type LaborerFormData = {
     name: string;
@@ -26,19 +28,38 @@ export type LaborerFormData = {
 export default function LaborFormDialog({
     onSubmit,
 }: {
-    onSubmit: (data: LaborerFormData) => void;
+    onSubmit: (data: LaborerFormData) => Promise<void>;
 }) {
+
     const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<LaborerFormData>({
         name: "",
         workerType: "TEMPORARY",
     });
 
-    const handleSubmit = () => {
-        onSubmit(formData);
-        setOpen(false);
-        setFormData({ name: "", workerType: "TEMPORARY" });
-    };
+    const handleSubmit = async () => {
+        try {
+            setLoading(true);
+            await onSubmit(formData);
+            toast.success("Laborer added successfully 🎉");
+            setOpen(false);
+
+        } catch (error: any) {
+            toast.error("Failed to add laborer");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (!open) {
+            setFormData({
+                name: "",
+                workerType: "TEMPORARY",
+            });
+        }
+    }, [open]);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -111,8 +132,12 @@ export default function LaborFormDialog({
                         <Button variant="outline" onClick={() => setOpen(false)}>
                             Cancel
                         </Button>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleSubmit}>
-                            Add Labor
+                        <Button
+                            disabled={loading}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={handleSubmit}
+                        >
+                            {loading ? "Adding..." : "Add Labor"}
                         </Button>
                     </div>
                 </div>

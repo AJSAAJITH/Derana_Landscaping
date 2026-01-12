@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUp, SignUpButton, UserButton } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import PageNavbar from "@/components/PageNavbar";
+import { ToastContainer } from "react-toastify";
 
 
 const geistSans = Geist({
@@ -37,9 +38,20 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+
             <div className="p-4">
               {children}
             </div>
+            <ToastContainer
+              position="top-right"
+              autoClose={4000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnHover
+              draggable
+              theme="colored"
+            />
 
           </ThemeProvider>
 

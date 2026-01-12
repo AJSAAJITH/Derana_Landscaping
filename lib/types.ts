@@ -13,6 +13,7 @@ export interface User {
     email?: string | null
     phone?: string | null
     role?: Role
+    isActive?: boolean
     createdAt: Date
 
 }
