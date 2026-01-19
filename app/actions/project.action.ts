@@ -6,7 +6,6 @@ import prisma from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { Project, ProjectStatus } from "@/lib/types";
 import { createProjectSchema } from "@/lib/validators/project.validator";
-import { id } from "zod/v4/locales";
 
 export async function createProject(
     input: unknown
@@ -229,5 +228,134 @@ export async function deleteProject(
             code: "SERVER_ERROR",
             message: "Failed to delete project",
         };
+    }
+}
+
+export async function getProjectByid(
+    projectId: string
+): Promise<ActionResult<Project>> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        if (!projectId) {
+            return {
+                success: false,
+                code: "VALIDATION_ERROR",
+                message: "Project Id con't fetch"
+            }
+        }
+
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            include: {
+                assignedSupervisor: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        isActive: true,
+                        createdAt: true,
+                    },
+                },
+            },
+        });
+
+        if (!project) {
+            return {
+                success: false,
+                code: "NOT_FOUND",
+                message: "Project not found",
+            };
+        }
+
+        return {
+            success: true,
+            data: {
+                id: project.id,
+                name: project.name,
+                clientName: project.clientName,
+                clientPhone: project.clientPhone,
+                address: project.address,
+                status: project.status,
+                startDate: project.startDate,
+                endDate: project.endDate,
+                budget: project.budget ? Number(project.budget) : null,
+
+                // ✅ IMPORTANT FIX
+                assignedSupervisorId: project.assignedSupervisorId,
+                assignedSupervisor: project.assignedSupervisor ?? null,
+
+                createdAt: project.createdAt,
+                updatedAt: project.updatedAt,
+            },
+        };
+    } catch (error) {
+        console.error("Can't fetch Project by Id", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load project",
+        };
+    } finally {
+        console.log("Project Id", projectId);
+    }
+}
+
+
+export async function updateProjectDates(
+    projectId: string,
+    startDate: Date,
+    endDate: Date
+): Promise<ActionResult> {
+    try {
+
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        if (!projectId) {
+            return {
+                success: false,
+                code: "VALIDATION_ERROR",
+                message: "project id not found",
+            }
+        }
+
+        if (!startDate || !endDate) {
+            return {
+                success: false,
+                code: "VALIDATION_ERROR",
+                message: "Start date and end date are requierd"
+            };
+        };
+
+        if (endDate < startDate) {
+            return {
+                success: false,
+                code: "VALIDATION_ERROR",
+                message: "End Date can not be befor start Date"
+            };
+        };
+
+        await prisma.project.update({
+            where: { id: projectId },
+            data: {
+                startDate,
+                endDate,
+            },
+        });
+
+        return {
+            success: true,
+            message: "Project dates updated successfully",
+        };
+
+    } catch (error) {
+        console.error("updateProjectDate Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to update project dates",
+        }
     }
 }

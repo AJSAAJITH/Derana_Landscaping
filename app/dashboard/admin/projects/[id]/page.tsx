@@ -1,17 +1,14 @@
-"use server";
-import React from 'react'
-import ProjectDetailsPage from './Client.SingleProjectView'
+// app/dashboard/admin/projects/[id]/page.tsx
 
-function SingleProjectView({
+import ProjectDetailsPage from "./Client.SingleProjectView";
+
+export default async function Page({
     params,
 }: {
-    params: { id: string }
+    params: Promise<{ id: string }>;
 }) {
-    return (
-        <div>
-            <ProjectDetailsPage params={params} />
-        </div>
-    )
-}
+    const { id } = await params;
+    console.log("Project ID (server):", id);
 
-export default SingleProjectView
+    return <ProjectDetailsPage projectId={id} />
+}

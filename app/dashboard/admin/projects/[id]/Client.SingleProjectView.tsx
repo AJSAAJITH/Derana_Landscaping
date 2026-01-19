@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,12 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Project } from "@/lib/types"
+import { getProjectByid, updateProjectDates } from "@/app/actions/project.action"
+import { toast } from "react-toastify"
+import DatePicker from "@/components/DatePicker"
+import { LoadingDetailsSkeleton } from "@/components/LoadingSkelaton"
+
 
 // Mock data for project details
 const mockProject = {
@@ -113,7 +119,15 @@ const mockDailyUpdates = [
     },
 ]
 
-export default function ProjectDetailsPage({ params }: { params: { id: string } }) {
+export default function ProjectDetailsPage({ projectId }: { projectId: string }) {
+
+    const [project, setProject] = useState<Project | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [startDate, setStartDate] = useState<Date | undefined>();
+    const [endDate, setEndDate] = useState<Date | undefined>();
+    const [editingDates, setEditingDates] = useState(false)
+    const [savingDates, setSavingDates] = useState(false)
+
     const [documents, setDocuments] = useState(mockDocuments)
     const [showAddDocument, setShowAddDocument] = useState(false)
     const [newDocTitle, setNewDocTitle] = useState("")
@@ -121,6 +135,63 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
     const [editingId, setEditingId] = useState<string | null>(null)
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split("T")[0])
 
+    const loadProject = async () => {
+        setLoading(true);
+
+        const result = await getProjectByid(projectId);
+        console.log("Prpject result: ", result);
+        if (!result.success || !result.data) {
+            toast.error(result.message ?? "Failed to load project");
+            setLoading(false);
+            return;
+        }
+
+        setProject(result.data);
+        setStartDate(result.data.startDate ? new Date(result.data.startDate) : undefined);
+        setEndDate(result.data.endDate ? new Date(result.data.endDate) : undefined);
+
+        setLoading(false);
+    };
+
+    const handleUpdateDates = async () => {
+        if (!startDate || !endDate) {
+            toast.error("Start date and end date are required")
+            return
+        }
+
+        setSavingDates(true)
+
+        const result = await updateProjectDates(
+            projectId,
+            startDate,
+            endDate
+        )
+
+        if (!result.success) {
+            toast.error(result.message ?? "Failed to update dates")
+            setSavingDates(false)
+            return
+        }
+
+        toast.success("Project dates updated")
+        setEditingDates(false)
+        await loadProject() // refresh data
+        setSavingDates(false)
+    }
+
+
+
+    useEffect(() => {
+        loadProject();
+    }, [projectId]);
+
+    if (loading) {
+        return <LoadingDetailsSkeleton />;
+    }
+
+    if (!project) {
+        return <p className="p-6 text-red-500">Project not found</p>;
+    }
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("en-LK", {
             style: "currency",
@@ -167,47 +238,157 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
             {/* Project Summary Card */}
             <Card className="border-border shadow-sm bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
                 <CardHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                         <div>
-                            <CardTitle className="text-3xl">{mockProject.name}</CardTitle>
-                            <CardDescription className="mt-2 text-base">{mockProject.description}</CardDescription>
+                            <CardTitle className="text-3xl">{project.name}</CardTitle>
+                            <CardDescription className="mt-2 text-base">
+                                Client: {project.clientName}
+                            </CardDescription>
                         </div>
-                        <Badge className="bg-green-600">
-                            {mockProject.status.charAt(0).toUpperCase() + mockProject.status.slice(1)}
+
+                        <Badge
+                            className={
+                                project.status === "ACTIVE"
+                                    ? "bg-green-600"
+                                    : project.status === "PENDING"
+                                        ? "bg-yellow-500"
+                                        : project.status === "PAUSED"
+                                            ? "bg-orange-500"
+                                            : project.status === "COMPLETED"
+                                                ? "bg-blue-600"
+                                                : "bg-red-600"
+                            }
+                        >
+                            {project.status}
                         </Badge>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+
+                <CardContent className="space-y-6">
+                    {/* Info Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <p className="text-sm text-muted-foreground">Client</p>
-                            <p className="font-semibold">{mockProject.clientName}</p>
+                            <p className="text-sm text-muted-foreground">Client Phone</p>
+                            <p className="font-semibold">{project.clientPhone}</p>
                         </div>
+
                         <div>
                             <p className="text-sm text-muted-foreground">Supervisor</p>
-                            <p className="font-semibold">{mockProject.supervisor}</p>
+                            <p className="font-semibold">
+                                {project.assignedSupervisor?.name ?? "Unassigned"}
+                            </p>
                         </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Start Date</p>
-                            <p className="font-semibold">{mockProject.startDate}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">End Date</p>
-                            <p className="font-semibold">{mockProject.endDate}</p>
-                        </div>
+
+
                     </div>
-                    {/* Progress Bar */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">Project Progress</p>
-                            <p className="text-sm font-semibold">{mockProject.progress}%</p>
+                    {/* Project Timeline */}
+                    <div className="p-4 rounded-lg border border-dashed border-border bg-slate-50 dark:bg-slate-900 space-y-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className="font-semibold">Project Timeline</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Set or adjust project start and end dates
+                                </p>
+                            </div>
+
+                            {!editingDates && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditingDates(true)}
+                                >
+                                    {project.startDate && project.endDate ? "Edit Dates" : "Set Dates"}
+                                </Button>
+                            )}
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                            <div className="bg-green-600 h-2 rounded-full" style={{ width: `${mockProject.progress}%` }} />
+
+                        {editingDates ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <DatePicker
+                                    date={startDate}
+                                    onChange={setStartDate}
+                                    placeholder="Select start date"
+                                />
+
+                                <DatePicker
+                                    date={endDate}
+                                    onChange={setEndDate}
+                                    placeholder="Select end date"
+                                />
+
+                                <div className="sm:col-span-2 flex flex-col sm:flex-row gap-2 justify-end">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setEditingDates(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        className="bg-green-600 hover:bg-green-700"
+                                        onClick={handleUpdateDates}
+                                        disabled={savingDates}
+                                    >
+                                        {savingDates ? "Saving..." : "Save Dates"}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Start Date</p>
+                                    <p className="font-semibold">
+                                        {project.startDate
+                                            ? new Date(project.startDate).toLocaleDateString("en-LK")
+                                            : "—"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">End Date</p>
+                                    <p className="font-semibold">
+                                        {project.endDate
+                                            ? new Date(project.endDate).toLocaleDateString("en-LK")
+                                            : "—"}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Budget */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950">
+                            <p className="text-sm text-muted-foreground">Budget</p>
+                            <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                                {project.budget
+                                    ? new Intl.NumberFormat("en-LK", {
+                                        style: "currency",
+                                        currency: "LKR",
+                                        maximumFractionDigits: 0,
+                                    }).format(project.budget)
+                                    : "—"}
+                            </p>
+                        </div>
+
+                        <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900">
+                            <p className="text-sm text-muted-foreground">Created At</p>
+                            <p className="font-semibold">
+                                {new Date(project.createdAt).toLocaleDateString("en-LK")}
+                            </p>
+                        </div>
+
+                        <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900">
+                            <p className="text-sm text-muted-foreground">Last Updated</p>
+                            <p className="font-semibold">
+                                {project.updatedAt
+                                    ? new Date(project.updatedAt).toLocaleDateString("en-LK")
+                                    : "—"}
+                            </p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
+
+
 
             {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-2">
@@ -469,7 +650,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
                         <CardTitle>Inventory Overview</CardTitle>
                         <CardDescription>Current materials allocated to this project</CardDescription>
                     </div>
-                    <Link href={`/admin/inventory?project=${mockProject.id}`}>
+                    <Link href={`/dashboard/admin/inventory?project=${mockProject.id}`}>
                         <Button className="gap-2 bg-green-600 hover:bg-green-700">
                             <FileText className="w-4 h-4" />
                             Explore Items

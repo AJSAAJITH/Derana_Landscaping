@@ -26,21 +26,28 @@ export type UserSummeryForProject = {
 }
 
 // Project Type
-export interface Project {
-    id: string
-    name: string
-    clientName: string
-    clientPhone: string
-    address?: string | null
-    startDate?: Date | null
-    endDate?: Date | null
-    budget?: number | null
-    status: ProjectStatus
-    assignedSupervisorId?: string | null
-    assignedSupervisor?: UserSummeryForProject | null
-    createdAt: Date
-    updatedAt?: Date
-}
+export type Project = {
+    id: string;
+    name: string;
+    clientName: string;
+    clientPhone: string;
+    address?: string | null;
+    status: ProjectStatus;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    budget?: number | null;
+
+    assignedSupervisorId?: string | null;
+    assignedSupervisor?: {
+        id: string;
+        name: string;
+        email?: string | null;
+        createdAt: Date;
+    } | null;
+
+    createdAt: Date;
+    updatedAt: Date;
+};
 
 // Laborer Type
 export interface Laborer {

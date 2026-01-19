@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle, Plus, Edit2, Trash2 } from "lucide-react"
+import { AlertTriangle, Plus, Edit2, Trash2, ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
     Dialog,
@@ -18,6 +18,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import type { InventoryItem } from "@/lib/types"
+import Link from "next/link"
 
 const SAMPLE_INVENTORY: InventoryItem[] = [
     {
@@ -172,6 +173,13 @@ export default function InventoryClient() {
 
     return (
         <div className="p-4 sm:p-6 md:p-8 space-y-6">
+            {/* Back Button */}
+            <Link href="/dashboard/admin/projects">
+                <Button variant="ghost" className="gap-2">
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Projects
+                </Button>
+            </Link>
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
