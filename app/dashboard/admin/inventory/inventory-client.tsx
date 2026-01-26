@@ -1,75 +1,35 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle, Plus, Edit2, Trash2, ArrowLeft } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
+import { AlertTriangle, Edit2, Trash2, ArrowLeft } from "lucide-react"
 import type { InventoryItem } from "@/lib/types"
 import Link from "next/link"
-
-const SAMPLE_INVENTORY: InventoryItem[] = [
-    {
-        id: "1",
-        projectId: "demo-project",
-        name: "Garden Soil Premium Mix",
-        category: "Soil & Fertilizers",
-        unit: "kg",
-        quantity: 150,
-        initialQuantity: 150,
-        threshold: 100,
-        unitCost: 45,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    },
-    {
-        id: "2",
-        projectId: "demo-project",
-        name: "Grass Seed - Hybrid Bermuda",
-        category: "Seeds",
-        unit: "kg",
-        quantity: 25,
-        initialQuantity: 25,
-        threshold: 50,
-        unitCost: 350,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    },
-    {
-        id: "3",
-        projectId: "demo-project",
-        name: "Mulch - Wood Chips",
-        category: "Mulch",
-        unit: "cubic meter",
-        quantity: 5,
-        initialQuantity: 5,
-        threshold: 10,
-        unitCost: 2500,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    },
-]
+import AddnewInventroyItem from "./componets/AddnewInventoryItem"
+import { MaterialCategory } from "@/app/generated/prisma"
+import { getMaterialCategories } from "@/app/actions/material-category.action"
+import AddNewCategoryDialog from "./componets/AddNewCategory"
+import { createInventoryItem, deleteInventoryItem, getAllInventoryItems, updateInventoryItem } from "@/app/actions/inventory.action"
+import { toast } from "react-toastify"
 
 
 export default function InventoryClient() {
-    const searchParams = useSearchParams()
-    const projectId = searchParams.get("project")
+    const searchParams = useSearchParams();
+    const projectId = searchParams.get("projectId")
+    // use Filtering, create item, UI lables
+    const isProjectContext = Boolean(projectId);
 
-    const [inventory, setInventory] = useState<InventoryItem[]>(SAMPLE_INVENTORY)
-    const [openAddDialog, setOpenAddDialog] = useState(false)
-    const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
+    const [inventory, setInventory] = useState<InventoryItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const [openAddDialog, setOpenAddDialog] = useState(false);
+    const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
     const [formData, setFormData] = useState({
         name: "",
         category: "",
@@ -77,7 +37,28 @@ export default function InventoryClient() {
         quantity: 0,
         threshold: 0,
         unitCost: 0,
-    })
+    });
+    const [categories, setCategories] = useState<MaterialCategory[]>([]);
+
+    const loadCategories = async () => {
+        const result = await getMaterialCategories();
+        if (result.success) setCategories(result.data ?? []);
+    }
+
+    const loadInventory = async () => {
+        if (!projectId) return;
+
+        setLoading(true);
+        const res = await getAllInventoryItems(projectId);
+
+        if (res.success) {
+            setInventory(res.data ?? [])
+            setError(null);
+        } else {
+            setError(res.message ?? "Failed to load Inventory");
+        }
+        setLoading(false);
+    };
 
     const getInventoryStatus = (item: InventoryItem): "in-stock" | "low-stock" | "critical" => {
         if (!item.threshold) return "in-stock"
@@ -102,62 +83,106 @@ export default function InventoryClient() {
 
     const lowStockItems = inventory.filter((item) => getInventoryStatus(item) !== "in-stock")
 
-    const handleSaveItem = () => {
-        if (!formData.name.trim()) return
 
-        if (editingItem) {
-            setInventory(
-                inventory.map((item) =>
-                    item.id === editingItem.id
-                        ? {
-                            ...item,
-                            ...formData,
-                            updatedAt: new Date(),
-                        }
-                        : item
-                )
-            )
-        } else {
-            const newItem: InventoryItem = {
-                id: crypto.randomUUID(),
-                projectId: projectId ?? "demo-project",
-                name: formData.name,
-                category: formData.category || null,
-                unit: formData.unit || null,
+    const handleSaveItem = async () => {
+        if (!projectId) return;
+
+        setLoading(true);
+        setError(null);
+
+        const payload = {
+            projectId,
+            name: formData.name.trim(),
+            categoryId: formData.category,
+            unit: formData.unit || undefined,
+            threshold: formData.threshold || undefined,
+            unitCost: formData.unitCost || undefined,
+        };
+
+        const res = editingItem
+            ? await updateInventoryItem({
+                id: editingItem.id,
+                ...payload,
+                addQuantity: formData.quantity,
+            })
+            : await createInventoryItem({
+                ...payload,
                 quantity: formData.quantity,
-                initialQuantity: formData.quantity,
-                threshold: formData.threshold || null,
-                unitCost: formData.unitCost || null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            }
+            });
 
-            setInventory((prev) => [...prev, newItem])
+        if (!res.success) {
+            const errorMessage =
+                res.message ||
+                res.fieldErrors?.name ||
+                res.fieldErrors?.categoryId ||
+                "Operation failed";
+
+            setError(errorMessage);
+            toast.error(errorMessage);
+            setLoading(false);
+            return;
         }
 
-        resetForm()
-        setOpenAddDialog(false)
-    }
+        toast.success(res.message);
+        await loadInventory();
+        resetForm();
+        setOpenAddDialog(false);
+        setLoading(false);
+    };
 
 
-    const handleEditItem = (item: InventoryItem) => {
-        setEditingItem(item)
+
+    const handleEditItem = (item: InventoryItem & { categoryId?: string }) => {
+        setEditingItem(item);
         setFormData({
             name: item.name,
-            category: item.category || "",
+            category: item.categoryId || "",
             unit: item.unit || "",
-            quantity: item.quantity,
+            quantity: 0,
             threshold: item.threshold || 0,
             unitCost: item.unitCost || 0,
-        })
-        setOpenAddDialog(true)
-    }
+        });
+        setOpenAddDialog(true);
+    };
 
-    const handleDeleteItem = (id: string) => {
-        if (confirm("Are you sure you want to delete this item?")) {
-            setInventory(inventory.filter((item) => item.id !== id))
+
+    const handleDeleteItem = async (id: string) => {
+        if (!projectId) return;
+
+        const confirmed = confirm(
+            "Are you sure you want to delete this inventory item?"
+        );
+
+        if (!confirmed) return;
+
+        setLoading(true);
+        setError(null);
+
+        const res = await deleteInventoryItem({
+            id,
+            projectId,
+        });
+
+        if (!res.success) {
+            const msg =
+                res.message ||
+                res.fieldErrors?.id ||
+                "Failed to delete inventory item";
+
+            setError(msg);
+            toast.error(msg);
+            setLoading(false);
+            return;
         }
-    }
+
+        toast.success(res.message);
+
+        // Refresh inventory list
+        await loadInventory();
+
+        setLoading(false);
+    };
+
 
     const resetForm = () => {
         setFormData({
@@ -171,10 +196,15 @@ export default function InventoryClient() {
         setEditingItem(null)
     }
 
+    useEffect(() => {
+        loadCategories();
+        loadInventory();
+    }, [projectId]);
+
     return (
         <div className="p-4 sm:p-6 md:p-8 space-y-6">
             {/* Back Button */}
-            <Link href="/dashboard/admin/projects">
+            <Link href={`/dashboard/admin/projects/${projectId}`}>
                 <Button variant="ghost" className="gap-2">
                     <ArrowLeft className="w-4 h-4" />
                     Back to Projects
@@ -187,101 +217,33 @@ export default function InventoryClient() {
                     {projectId && <p className="text-muted-foreground mt-1 text-sm">Project-specific inventory items</p>}
                     {!projectId && <p className="text-muted-foreground mt-1 text-sm">Track inventory items and stock levels</p>}
                 </div>
-                <Dialog open={openAddDialog} onOpenChange={setOpenAddDialog}>
-                    <DialogTrigger asChild>
-                        <Button className="gap-2 bg-green-600 hover:bg-green-700 w-full sm:w-auto" onClick={() => resetForm()}>
-                            <Plus className="w-4 h-4" />
-                            <span className="hidden sm:inline">Add New Item</span>
-                            <span className="sm:hidden">Add Item</span>
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>{editingItem ? "Update Item" : "Add New Item"}</DialogTitle>
-                            <DialogDescription>
-                                {editingItem ? "Update inventory item details" : "Add a new inventory item"}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm font-medium">Item Name</label>
-                                <Input
-                                    placeholder="e.g., Garden Soil"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="mt-1"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium">Category</label>
-                                <Input
-                                    placeholder="e.g., Soil & Fertilizers"
-                                    value={formData.category}
-                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="mt-1"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-sm font-medium">Unit</label>
-                                    <Input
-                                        placeholder="e.g., kg"
-                                        value={formData.unit}
-                                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                        className="mt-1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Quantity</label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={formData.quantity}
-                                        onChange={(e) => setFormData({ ...formData, quantity: Number.parseInt(e.target.value) || 0 })}
-                                        className="mt-1"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-sm font-medium">Threshold</label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={formData.threshold}
-                                        onChange={(e) => setFormData({ ...formData, threshold: Number.parseInt(e.target.value) || 0 })}
-                                        className="mt-1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Unit Cost</label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={formData.unitCost}
-                                        onChange={(e) => setFormData({ ...formData, unitCost: Number.parseInt(e.target.value) || 0 })}
-                                        className="mt-1"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-2 pt-2">
-                                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleSaveItem}>
-                                    {editingItem ? "Update Item" : "Add Item"}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 bg-transparent"
-                                    onClick={() => {
-                                        setOpenAddDialog(false)
-                                        resetForm()
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ">
+                    {/* add new Inventory Item */}
+                    <AddnewInventroyItem
+                        projectId={projectId}
+                        open={openAddDialog}
+                        onOpenChange={setOpenAddDialog}
+                        isEditing={Boolean(editingItem)}
+                        categories={categories}
+                        formData={formData}
+                        setFormData={setFormData}
+                        onSave={handleSaveItem}
+                        onReset={resetForm}
+                        error={error}
+                        loading={loading}
+                    />
+
+                    {/* add new category */}
+                    <AddNewCategoryDialog onCreated={loadCategories} />
+
+                    {categories.length === 0 && (
+                        <p className="text-sm text-muted-foreground px-2">
+                            No categories available yet
+                        </p>
+                    )}
+
+                </div>
+
             </div>
 
             {/* Low Stock Alert */}
@@ -355,9 +317,9 @@ export default function InventoryClient() {
                                     <TableHead className="font-semibold text-xs sm:text-sm">Item Name</TableHead>
                                     <TableHead className="font-semibold text-xs sm:text-sm">Category</TableHead>
                                     <TableHead className="font-semibold text-xs sm:text-sm">Unit</TableHead>
-                                    <TableHead className="font-semibold text-xs sm:text-sm text-right">Qty</TableHead>
-                                    <TableHead className="font-semibold text-xs sm:text-sm text-right">Threshold</TableHead>
-                                    <TableHead className="font-semibold text-xs sm:text-sm text-right">Cost</TableHead>
+                                    <TableHead className="font-semibold text-xs sm:text-sm ">Qty</TableHead>
+                                    <TableHead className="font-semibold text-xs sm:text-sm ">Threshold</TableHead>
+                                    <TableHead className="font-semibold text-xs sm:text-sm ">Price</TableHead>
                                     <TableHead className="font-semibold text-xs sm:text-sm">Status</TableHead>
                                     <TableHead className="font-semibold text-xs sm:text-sm">Actions</TableHead>
                                 </TableRow>
@@ -379,11 +341,11 @@ export default function InventoryClient() {
                                                     {item.category || "N/A"}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground text-xs sm:text-sm">{item.unit || "pcs"}</TableCell>
-                                                <TableCell className="font-semibold text-xs sm:text-sm text-right">{item.quantity}</TableCell>
-                                                <TableCell className="text-muted-foreground text-xs sm:text-sm text-right">
+                                                <TableCell className="font-semibold text-xs sm:text-sm ">{item.quantity}</TableCell>
+                                                <TableCell className="text-muted-foreground text-xs sm:text-sm ">
                                                     {item.threshold || "N/A"}
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground text-xs sm:text-sm text-right">
+                                                <TableCell className="text-muted-foreground text-xs sm:text-sm ">
                                                     {item.unitCost ? `LKR ${item.unitCost}` : "N/A"}
                                                 </TableCell>
                                                 <TableCell>
@@ -401,6 +363,7 @@ export default function InventoryClient() {
                                                             title="Edit"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
+
                                                         </Button>
                                                         <Button
                                                             variant="ghost"

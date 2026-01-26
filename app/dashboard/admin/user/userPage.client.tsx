@@ -82,33 +82,28 @@ export default function UserPageClient() {
         phone?: string;
         password: string;
     }) => {
-        try {
-            setIsSubmitting(true);
+        setIsSubmitting(true);
+        setErrors({});
 
-            const result = await createUser(data);
-            setIsSubmitting(false);
+        const result = await createUser(data);
+        setIsSubmitting(false);
 
-            if (!result.success) {
-                if (result.fieldErrors) {
-                    Object.values(result.fieldErrors).forEach((msg) =>
-                        toast.error(msg)
-                    );
-                } else if (result.message) {
-                    toast.error(result.message);
-                }
-                return;
+        if (!result.success) {
+            if (result.fieldErrors) {
+                setErrors(result.fieldErrors); // 👈 KEEP MODAL OPEN
             }
 
-            toast.success("Supervisor created successfully 🎉");
-            setIsModalOpen(false);
-
-            await loadUsers();
-
-        } catch (err) {
-            console.error(err);
-            toast.error("Unexpected error occurred");
+            if (result.message) {
+                toast.error(result.message);
+            }
+            return;
         }
+
+        toast.success("Supervisor created successfully 🎉");
+        setIsModalOpen(false); // ✅ only on success
+        await loadUsers();
     };
+
 
 
     const handleDelete = async (id: string) => {

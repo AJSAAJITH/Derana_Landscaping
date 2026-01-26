@@ -1,18 +1,28 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Eye, EyeOff } from "lucide-react"
+
+type Props = {
+    isOpen: boolean
+    onClose: () => void
+    onSubmit: (data: {
+        name: string
+        email: string
+        phone?: string
+        password: string
+    }) => void
+    loading: boolean
+    errors?: Record<string, string>
+}
 
 export default function CreateSupervisorModal({
     isOpen,
@@ -20,106 +30,122 @@ export default function CreateSupervisorModal({
     onSubmit,
     loading,
     errors,
-}: any) {
-    const [showPassword, setShowPassword] = useState(false);
+}: Props) {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
         phone: "",
         password: "",
-    });
+    })
 
+    const [showPassword, setShowPassword] = useState(false)
+
+    /* ✅ Reset form when modal closes */
     useEffect(() => {
         if (!isOpen) {
-            setFormData({ name: "", email: "", phone: "", password: "" });
-            setShowPassword(false);
+            setFormData({ name: "", email: "", phone: "", password: "" })
+            setShowPassword(false)
         }
-    }, [isOpen]);
+    }, [isOpen])
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSubmit(formData);
-    };
-
+    /* ✅ Reusable field error component */
     const FieldError = ({ name }: { name: string }) =>
         errors?.[name] ? (
-            <p className="text-sm text-red-600">{errors[name]}</p>
-        ) : null;
+            <p className="text-sm text-red-600 mt-1">{errors[name]}</p>
+        ) : null
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        setFormData((prev) => ({ ...prev, [name]: value }))
+    }
+
+    const handleSubmit = () => {
+        onSubmit(formData)
+    }
 
     return (
-        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Create Supervisor</DialogTitle>
-                    <DialogDescription>Create a supervisor account</DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-4">
+                    {/* Name */}
                     <div>
-                        <Label>Full Name</Label>
                         <Input
+                            name="name"
+                            placeholder="Full Name"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={handleChange}
                         />
                         <FieldError name="name" />
                     </div>
 
+                    {/* Email */}
                     <div>
-                        <Label>Email</Label>
                         <Input
+                            name="email"
+                            placeholder="Email Address"
                             value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            onChange={handleChange}
                         />
                         <FieldError name="email" />
                     </div>
 
+                    {/* Phone */}
                     <div>
-                        <Label>Phone</Label>
                         <Input
+                            name="phone"
+                            placeholder="Phone Number"
                             value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            onChange={handleChange}
                         />
                         <FieldError name="phone" />
                     </div>
 
-                    <div>
-                        <Label>Password</Label>
-                        <div className="relative">
-                            <Input
-                                type={showPassword ? "text" : "password"}
-                                value={formData.password}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, password: e.target.value })
-                                }
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Password must contain:
-                                <br />• 8+ characters
-                                <br />• Uppercase & lowercase letters
-                                <br />• A number
-                                <br />• A special character
-                            </p>
-                            <button
-                                type="button"
-                                className="absolute right-3 top-2.5"
-                                onClick={() => setShowPassword((p) => !p)}
-                            >
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                        </div>
+                    {/* Password */}
+                    <div className="relative">
+                        <Input
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Password"
+                            value={formData.password}
+                            onChange={handleChange}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword((p) => !p)}
+                            className="absolute right-3 top-2.5 text-muted-foreground"
+                        >
+                            {showPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                            ) : (
+                                <Eye className="w-4 h-4" />
+                            )}
+                        </button>
                         <FieldError name="password" />
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" type="button" onClick={onClose}>
+                    {/* Actions */}
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                            variant="outline"
+                            onClick={onClose}
+                            disabled={loading}
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={loading}>
-                            {loading ? "Creating..." : "Create"}
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {loading ? "Creating..." : "Create Supervisor"}
                         </Button>
-                    </DialogFooter>
-                </form>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
-    );
+    )
 }

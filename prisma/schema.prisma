@@ -142,23 +142,41 @@ model ProjectDocument {
 //////////////////////////////////////////////////
 
 model InventoryItem {
-  id              String   @id @default(cuid())
-  projectId       String
-  name            String
-  category        String?
+  id        String @id @default(cuid())
+  projectId String
+  name      String
+
+  // category ref
+  categoryId  String?
+  categoryRef MaterialCategory? @relation(fields: [categoryId], references: [id])
+
   unit            String?
   quantity        Float    @default(0)
   initialQuantity Float?
   threshold       Float?
   unitCost        Decimal? @db.Decimal(12, 2)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   usageLogs            InventoryUsageLog[]
   materialRequestItems MaterialRequestItem[]
 
+  @@unique([projectId, name, categoryId])
   @@index([projectId])
+  @@index([categoryId])
+}
+
+model MaterialCategory {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryItems InventoryItem[]
 }
 
 model InventoryUsageLog {

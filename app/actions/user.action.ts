@@ -4,11 +4,11 @@ import { ActionResult } from "@/lib/action-result";
 import { getAuthUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
-import { validateSupervisorInput } from "@/lib/validators/user.validator";
 import { clerkClient } from "@clerk/nextjs/server";
 import { Prisma } from "../generated/prisma";
 import { revalidatePath } from "next/cache";
 import { User } from "@/lib/types";
+import { supervisorSchema } from "@/lib/validators/supervisor.validation";
 
 export async function createUser(input: {
     name: string;
@@ -22,14 +22,23 @@ export async function createUser(input: {
         requireRole(user, ["SUPER_ADMIN"]);
 
         /* ───────────────── INPUT VALIDATION ───────────────── */
-        const fieldErrors = validateSupervisorInput(input);
-        if (fieldErrors) {
+        const parsed = supervisorSchema.safeParse(input);
+
+        if (!parsed.success) {
+            const fieldErrors: Record<string, string> = {};
+
+            parsed.error.issues.forEach((issue) => {
+                const field = issue.path[0] as string;
+                fieldErrors[field] = issue.message;
+            });
+
             return {
                 success: false,
                 code: "VALIDATION_ERROR",
                 fieldErrors,
             };
         }
+
 
         /* ───────────────── DUPLICATE CHECK (DB) ───────────────── */
         const existing = await prisma.user.findFirst({
