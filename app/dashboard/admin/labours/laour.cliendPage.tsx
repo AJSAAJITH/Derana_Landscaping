@@ -17,7 +17,7 @@ import {
     getAllLabours,
     deleteLabor,
     laborToggleStatus,
-} from "@/app/actions/labour.actions";
+} from "@/app/actions/admin/labour.actions";
 import { toast } from "react-toastify";
 
 export default function LaborManagementPage() {

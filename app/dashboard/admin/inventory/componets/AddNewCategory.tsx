@@ -12,7 +12,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
-import { CreateMetirialCategory } from "@/app/actions/material-category.action"
+import { CreateMetirialCategory } from "@/app/actions/admin/material-category.action"
 import { toast } from "react-toastify"
 
 interface AddNewCategoryDialogProps {

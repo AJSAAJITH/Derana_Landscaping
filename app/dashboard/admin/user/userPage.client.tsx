@@ -1,5 +1,5 @@
 "use client"
-import { createUser, deleteSupervisor, getAllSupervisors, toggleSupervisorStatus } from "@/app/actions/user.action";
+import { createUser, deleteSupervisor, getAllSupervisors, toggleSupervisorStatus } from "@/app/actions/admin/user.action"
 import React, { useEffect, useState } from "react"
 import {
     Card,

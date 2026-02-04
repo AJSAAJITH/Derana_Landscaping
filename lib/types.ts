@@ -18,6 +18,33 @@ export interface User {
 
 }
 
+export type SupervisorProjectRow = {
+    id: string;
+    name: string;
+    clientName: string;
+    status: ProjectStatus;
+    startDate: Date | string;
+    endDate: Date | string;
+};
+
+export type SupervisorProjectsPayload = {
+    supervisor: {
+        id: string;
+        name: string;
+        email?: string;
+    };
+    projects: SupervisorProjectRow[];
+};
+
+export type SupervisorProjectDetails = {
+    id: string;
+    name: string;
+    address?: string;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    status: ProjectStatus;
+};
+
 export type UserSummeryForProject = {
     id: string,
     name: string,
@@ -248,4 +275,27 @@ export interface Expense {
     project?: Project
 }
 
+export type AdminAttendanceRow = {
+    id: string; // assignmentId
+    laborerId: string;
+    laborerName: string;
+    workerType: "PERMANENT" | "TEMPORARY";
+    status: "ASSIGNED" | "PRESENT";
+    checkIn?: string;
+    checkOut?: string;
+};
+
+
+//// labor types
+
+export type LaborSelection = {
+    id: string;
+    name: string;
+    workerType: WorkerType;
+}
+export type AttendanceRow = {
+    date: string;
+    status: "PRESENT" | "ABSENT" | "HALF_DAY";
+    hoursWorked?: number;
+}
 

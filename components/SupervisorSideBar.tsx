@@ -19,32 +19,32 @@ import { Separator } from "./ui/separator"
 const supervisorMenuItems = [
     {
         title: "Dashboard",
-        url: "/supervisor/dashboard",
+        url: "/dashboard/supervisor",
         icon: Home,
     },
     {
         title: "Inventory",
-        url: "/supervisor/inventory",
+        url: "/dashboard/supervisor/inventory",
         icon: ClipboardList,
     },
     {
         title: "Material Requests",
-        url: "/supervisor/materials",
+        url: "/dashboard/supervisor/materials",
         icon: AlertCircle,
     },
     {
         title: "Labor Requests",
-        url: "/supervisor/labors",
+        url: "/dashboard/supervisor/labors",
         icon: User,
     },
     {
         title: "Attendance",
-        url: "/supervisor/attendance",
+        url: "/dashboard/supervisor/attendance",
         icon: Users,
     },
     {
         title: "Daily Reports",
-        url: "/supervisor/reports",
+        url: "/dashboard/supervisor/reports",
         icon: FileText,
     },
 ]

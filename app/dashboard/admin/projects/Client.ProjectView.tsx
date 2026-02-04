@@ -24,7 +24,7 @@ import {
 
 import type { Project } from "@/lib/types";
 import { CreateProjectDialog } from "./create-project-dialog";
-import { deleteProject, getAllProjects, updateProjectStatus } from "@/app/actions/project.action";
+import { deleteProject, getAllProjects, updateProjectStatus } from "@/app/actions/admin/project.action";
 import { toast } from "react-toastify";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 

@@ -51,7 +51,7 @@ export function AttendanceActions({
                         variant="ghost"
                         size="sm"
                         onClick={() => setCheckInOpen(true)}
-                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 cursor-pointer"
                         title="Set Check-in Time"
                     >
                         <LogIn className="w-4 h-4" />
@@ -64,7 +64,7 @@ export function AttendanceActions({
                         variant="ghost"
                         size="sm"
                         onClick={() => setCheckOutOpen(true)}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
                         title="Set Check-out Time"
                     >
                         <LogOut className="w-4 h-4" />

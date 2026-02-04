@@ -2,21 +2,19 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Users } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 import { Project } from "@/lib/types"
-import { getProjectByid, updateProjectDates } from "@/app/actions/project.action"
+import { getProjectByid, updateProjectDates } from "@/app/actions/admin/project.action"
 import { toast } from "react-toastify"
 
-import DatePicker from "@/components/DatePicker"
 import { LoadingDetailsSkeleton } from "@/components/LoadingSkelaton"
 
 import { ProjectDocuments } from "./components/ProjectDocuments"
-import { ProjectLabourAttendance } from "./components/ProjectLabourAttendance"
 import { ProjectDailyUpdates } from "./components/ProjectDailyUpdates"
 import { ProjectInventory } from "./components/ProjectInventory"
 import { ProjectMaterialRequests } from "./components/ProjectMeterialRequest"
@@ -144,7 +142,14 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
             {/* ACTION DIALOGS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <ProjectDocuments initialDocuments={mockDocuments} />
-                <ProjectLabourAttendance attendance={mockLaborAttendance} />
+                {/* <ProjectLabourAttendance attendance={mockLaborAttendance} /> */}
+                <Link href={`/dashboard/admin/projects/${projectId}/attendance`}>
+                    <Button className="gap-2 bg-green-600 hover:bg-green-700 w-full">
+                        <Users className="w-4 h-4" />
+                        <span className="hidden sm:inline">Labour Overview</span>
+                        <span className="sm:hidden">Overview</span>
+                    </Button>
+                </Link>
                 <ProjectDailyUpdates updates={mockDailyUpdates} />
             </div>
 

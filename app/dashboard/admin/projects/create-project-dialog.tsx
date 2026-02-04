@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus } from "lucide-react"
 import { Project, User } from "@/lib/types"
-import { getAllSupervisors } from "@/app/actions/user.action"
-import { createProject } from "@/app/actions/project.action"
+import { getAllSupervisors } from "@/app/actions/admin/user.action"
+import { createProject } from "@/app/actions/admin/project.action"
 import { toast } from "react-toastify"
 
 

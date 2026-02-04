@@ -12,9 +12,9 @@ import type { InventoryItem } from "@/lib/types"
 import Link from "next/link"
 import AddnewInventroyItem from "./componets/AddnewInventoryItem"
 import { MaterialCategory } from "@/app/generated/prisma"
-import { getMaterialCategories } from "@/app/actions/material-category.action"
+import { getMaterialCategories } from "@/app/actions/admin/material-category.action"
 import AddNewCategoryDialog from "./componets/AddNewCategory"
-import { createInventoryItem, deleteInventoryItem, getAllInventoryItems, updateInventoryItem } from "@/app/actions/inventory.action"
+import { createInventoryItem, deleteInventoryItem, getAllInventoryItems, updateInventoryItem } from "@/app/actions/admin/inventory.action"
 import { toast } from "react-toastify"
 
 

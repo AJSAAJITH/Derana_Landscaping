@@ -92,6 +92,54 @@ export async function getAllLabours(): Promise<ActionResult<Laborer[]>> {
 
 }
 
+type laborType = {
+    id: string;
+    name: string;
+    workerType: "PERMANENT" | "TEMPORARY";
+}
+
+export async function getActiveLabours(): Promise<ActionResult<laborType[]>> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const labourers = await prisma.laborer.findMany({
+            where: {
+                status: true,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                nic: true,
+                workerType: true,
+                status: true,
+                notes: true,
+                createdAt: true,
+                updatedAt: true,
+            }
+        });
+
+        return {
+            success: true,
+            data: labourers,
+        }
+
+    } catch (error) {
+        console.error("Error fetching active labourers:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to fetch active labourers.",
+        }
+    }
+}
+
+
+
 export async function getLaborById(
     laborId: string
 ): Promise<ActionResult<{ id: string; status: boolean }>> {

@@ -5,10 +5,10 @@ import { getAuthUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { clerkClient } from "@clerk/nextjs/server";
-import { Prisma } from "../generated/prisma";
 import { revalidatePath } from "next/cache";
 import { User } from "@/lib/types";
 import { supervisorSchema } from "@/lib/validators/supervisor.validation";
+import { Prisma } from "@/app/generated/prisma";
 
 export async function createUser(input: {
     name: string;

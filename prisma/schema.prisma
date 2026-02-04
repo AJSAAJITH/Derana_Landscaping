@@ -53,6 +53,13 @@ enum PayeeType {
   OTHER
 }
 
+enum AssignmentStatus {
+  ASSIGNED
+  PRESENT
+  ABSENT
+  HALF_DAY
+}
+
 //////////////////////////////////////////////////
 // USER
 //////////////////////////////////////////////////
@@ -82,6 +89,8 @@ model User {
 
   materialRequests MaterialRequest[]
   payments         Payment[]
+
+  dailyLaborAssignments DailyLaborAssignment[] @relation("AssignedByUser")
 }
 
 //////////////////////////////////////////////////
@@ -115,6 +124,8 @@ model Project {
   payments          Payment[]
   incomes           Income[]
   expenses          Expense[]
+
+  dailyLaborAssignments DailyLaborAssignment[]
 
   @@index([assignedSupervisorId])
 }
@@ -257,6 +268,8 @@ model Laborer {
   attendance Attendance[]
   payments   Payment[]    @relation("LaborerPayments")
 
+  dailyAssignments DailyLaborAssignment[]
+
   @@index([phone])
 }
 
@@ -277,16 +290,42 @@ model Attendance {
   supervisor User    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  // ✅ inverse side ONLY — no fields / references
+  dailyAssignment DailyLaborAssignment?
+
   @@unique([laborerId, date])
   @@index([laborerId])
   @@index([supervisorId])
   @@index([date])
 }
 
-//////////////////////////////////////////////////
-// LABOR REQUESTS
-//////////////////////////////////////////////////
+// Daily Labor Assignment
+model DailyLaborAssignment {
+  id        String           @id @default(cuid())
+  projectId String
+  laborerId String
+  date      DateTime
+  status    AssignmentStatus @default(ASSIGNED)
 
+  // Audit
+  assignedById String
+  approved     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  laborer Laborer @relation(fields: [laborerId], references: [id], onDelete: Cascade)
+
+  assignedBy User @relation("AssignedByUser", fields: [assignedById], references: [id])
+
+  // ✅ OWNING SIDE OF 1–1
+  attendanceId String?     @unique
+  attendance   Attendance? @relation(fields: [attendanceId], references: [id])
+
+  @@unique([projectId, laborerId, date])
+  @@index([projectId, date])
+}
+
+// LABOR REQUESTS
 model LaborRequest {
   id            String        @id @default(cuid())
   projectId     String
