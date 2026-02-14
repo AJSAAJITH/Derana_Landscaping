@@ -8,36 +8,21 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
     AlertTriangle,
     AlertCircle,
-    CheckCircle,
     Clock,
-    Briefcase,
+    Store,
 } from "lucide-react"
 import Link from "next/link"
 import ScrollableTable from "@/components/ScrollableTable"
-import { SupervisorProjectDetails } from "@/lib/types"
-
-
-const lowStockItems = [
-    { name: "Grass Seeds", current: 250, threshold: 500 },
-    { name: "Fertilizer", current: 150, threshold: 200 },
-    { name: "Garden Plants", current: 50, threshold: 100 },
-    { name: "Grass Seeds", current: 250, threshold: 500 },
-    { name: "Fertilizer", current: 150, threshold: 200 },
-    { name: "Garden Plants", current: 50, threshold: 100 },
-]
-
-const pendingRequests = [
-    { id: "1", type: "Material Request", item: "Additional Fertilizer", status: "pending", date: "2024-01-22" },
-    { id: "2", type: "Labor Request", workers: "3 additional workers", status: "approved", date: "2024-01-20" },
-    { id: "1", type: "Material Request", item: "Additional Fertilizer", status: "pending", date: "2024-01-22" },
-    { id: "2", type: "Labor Request", workers: "3 additional workers", status: "approved", date: "2024-01-20" },
-    { id: "1", type: "Material Request", item: "Additional Fertilizer", status: "pending", date: "2024-01-22" },
-    { id: "2", type: "Labor Request", workers: "3 additional workers", status: "approved", date: "2024-01-20" },
-]
+import { ProjectInventorItemDTO, SupervisorProjectDetails, SupervisorRequestDTO } from "@/lib/types"
+import QuickActions from "./components/quickActions"
+import { useEffect, useState } from "react"
+import { loadSupervisorRequests } from "@/app/actions/supervisor/request.action"
+import { toast } from "react-toastify"
+import { getInventorySupervisor } from "@/app/actions/supervisor/inventory.action"
+import { getSupervisorProjectTodayAttendance } from "@/app/actions/supervisor/supervisor.action"
 
 
 const STATUS_COLOR: Record<string, string> = {
@@ -52,7 +37,101 @@ export default function ProjectOverview({
 }: {
     project: SupervisorProjectDetails
 }) {
-    const progress = 65 // keep mock for now
+
+    const [pendingRequests, setPendingRequests] = useState<SupervisorRequestDTO[]>([]);
+    const [loadingPending, setLoadingPending] = useState(true);
+
+    const [lowStockItems, setLowStockItems] = useState<ProjectInventorItemDTO[]>([]);
+    const [loadingLowStock, setLoadingLowStock] = useState(true);
+
+    // Quick action cards
+    const [todayAttendanceCount, setTodayAttendanceCount] = useState<number>(0)
+    const [loadingAttendance, setLoadingAttendance] = useState(true)
+    const [stockCount, setStockCount] = useState<number>(0);
+    const [loadingStock, setLoadingStock] = useState(true);
+
+    async function loadStockCount() {
+        setLoadingStock(true)
+
+        const result = await getInventorySupervisor(project.id)
+
+        if (!result.success || !result.data) {
+            setStockCount(0)
+            setLoadingStock(false)
+            return
+        }
+
+        setStockCount(result.data.length)
+        setLoadingStock(false)
+    }
+
+    async function loadPending() {
+        setLoadingPending(true)
+
+        const result = await loadSupervisorRequests(project.id)
+
+        if (!result.success || !result.data) {
+            toast.error(result.message || "Failed to load requests")
+            setLoadingPending(false)
+            return
+        }
+
+        const onlyPending = result.data.filter(
+            (r) => r.status === "PENDING"
+        )
+
+        setPendingRequests(onlyPending)
+        setLoadingPending(false)
+    }
+
+    async function loadLowStock() {
+        setLoadingLowStock(true)
+
+        const result = await getInventorySupervisor(project.id)
+
+        if (!result.success || !result.data) {
+            toast.error(result.message || "Failed to load inventory")
+            setLoadingLowStock(false)
+            return
+        }
+
+        const filteredLowStock = result.data.filter((item) =>
+            item.threshold !== null &&
+            item.quantity <= item.threshold
+        )
+
+        setLowStockItems(filteredLowStock)
+        setLoadingLowStock(false)
+    }
+
+    // Quick action cards
+    async function loadAttendanceCount() {
+        setLoadingAttendance(true)
+
+        const result = await getSupervisorProjectTodayAttendance(project.id)
+
+        if (!result.success || !result.data) {
+            setTodayAttendanceCount(0)
+            setLoadingAttendance(false)
+            return
+        }
+
+        const presentCount = result.data.filter(
+            (row) => row.status === "present"
+        ).length
+
+        setTodayAttendanceCount(presentCount)
+        setLoadingAttendance(false)
+    }
+
+    useEffect(() => {
+        loadPending();
+        loadLowStock();
+
+        loadAttendanceCount();
+        loadStockCount();
+    }, [project.id])
+
 
     return (
         <div className="p-2 space-y-6">
@@ -128,40 +207,66 @@ export default function ProjectOverview({
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">12</p>
-                            <p className="text-xs text-muted-foreground mt-1">workers present</p>
+                            {loadingAttendance ? (
+                                <p className="text-2xl font-bold">...</p>
+                            ) : (
+                                <p className="text-2xl font-bold">
+                                    {todayAttendanceCount}
+                                </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                                workers present
+                            </p>
                         </CardContent>
                     </Card>
                 </Link>
-                <Card className="border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                            Low Stock Items
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-yellow-600">{lowStockItems.length}</p>
-                        <p className="text-xs text-muted-foreground mt-1">need ordering</p>
-                    </CardContent>
-                </Card>
 
-                <Card className="border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-orange-600" />
-                            Pending Requests
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-orange-600">2</p>
-                        <p className="text-xs text-muted-foreground mt-1">awaiting approval</p>
-                    </CardContent>
-                </Card>
+                <Link href={`/dashboard/supervisor/projects/${project.id}/inventory`}>
+                    <Card className="border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <Store className="h-4 w-4 text-yellow-600" />
+                                Stock Items
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {loadingStock ? (
+                                <p className="text-2xl font-bold text-yellow-600">...</p>
+                            ) : (
+                                <p className="text-2xl font-bold text-yellow-600">
+                                    {stockCount}
+                                </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">total stock Items</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+
+                <Link href={`/dashboard/supervisor/projects/${project.id}/inventory/supervisorRequest`}>
+                    <Card className="border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 text-orange-600" />
+                                Pending Requests
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {loadingPending ? (
+                                <p className="text-2xl font-bold text-orange-600">...</p>
+                            ) : (
+                                <p className="text-2xl font-bold text-orange-600">
+                                    {pendingRequests.length}
+                                </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">awaiting approval</p>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
 
             {/* Low Stock Alerts and Pending Requests */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
                 {/* Low Stock Alerts */}
                 <Card className="border-yellow-200 dark:border-yellow-800 shadow-sm">
                     <CardHeader>
@@ -169,33 +274,49 @@ export default function ProjectOverview({
                             <AlertTriangle className="h-5 w-5 text-yellow-600" />
                             Low Stock Alerts
                         </CardTitle>
-                        <CardDescription>Items running low on this project</CardDescription>
+                        <CardDescription>
+                            Items running low on this project
+                        </CardDescription>
                     </CardHeader>
+
                     <ScrollableTable maxHeight={300}>
                         <CardContent className="space-y-3">
-                            {lowStockItems.map((item, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg"
-                                >
-                                    <div>
-                                        <p className="font-medium">{item.name}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {item.current} / {item.threshold}
-                                        </p>
+
+                            {loadingLowStock ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Loading low stock items...
+                                </p>
+                            ) : lowStockItems.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No low stock alerts 🎉
+                                </p>
+                            ) : (
+                                lowStockItems.map((item) => (
+                                    <div key={item.id}>
+                                        <Link href={`/dashboard/supervisor/projects/${project.id}/inventory`}>
+                                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
+
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {item.inventoryItem.name}
+                                                    </p>
+
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {item.quantity} {item.inventoryItem.unit ?? ""}
+                                                        {" / "}
+                                                        {item.threshold} {item.inventoryItem.unit ?? ""}
+                                                    </p>
+                                                </div>
+
+                                            </div>
+                                        </Link>
                                     </div>
-                                    <Link href="/supervisor/materials">
-                                        <Button size="sm" variant="outline" className="text-yellow-600 bg-transparent">
-                                            Request
-                                        </Button>
-                                    </Link>
-                                </div>
-                            ))}
+                                ))
+                            )}
+
                         </CardContent>
                     </ScrollableTable>
-
                 </Card>
-
                 {/* Pending Requests */}
                 <Card className="border-blue-200 dark:border-blue-800 shadow-sm">
                     <CardHeader>
@@ -205,87 +326,55 @@ export default function ProjectOverview({
                         </CardTitle>
                         <CardDescription>Your pending approvals</CardDescription>
                     </CardHeader>
+
                     <ScrollableTable maxHeight={300}>
                         <CardContent className="space-y-3">
-                            {pendingRequests.map((request) => (
-                                <div
-                                    key={request.id}
-                                    className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg"
-                                >
-                                    <div>
-                                        <p className="font-medium">{request.type}</p>
-                                        <p className="text-sm text-muted-foreground">{request.item || request.workers}</p>
+
+                            {loadingPending ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Loading pending requests...
+                                </p>
+                            ) : pendingRequests.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No pending requests
+                                </p>
+                            ) : (
+                                pendingRequests.map((request) => (
+                                    <div key={request.id}>
+                                        <Link href={`/dashboard/supervisor/projects/${project.id}/inventory/supervisorRequest`}>
+                                            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {request.type}
+                                                    </p>
+
+                                                    <p className="text-sm text-muted-foreground line-clamp-1">
+                                                        {request.supervisorNote}
+                                                    </p>
+                                                </div>
+
+                                                <Badge
+                                                    variant="outline"
+                                                    className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                                >
+                                                    Pending
+                                                </Badge>
+
+                                            </div>
+                                        </Link>
                                     </div>
-                                    <Badge
-                                        variant="outline"
-                                        className={
-                                            request.status === "approved"
-                                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                        }
-                                    >
-                                        {request.status === "approved" ? "Approved" : "Pending"}
-                                    </Badge>
-                                </div>
-                            ))}
+                                ))
+                            )}
+
                         </CardContent>
                     </ScrollableTable>
                 </Card>
+
             </div>
 
             {/* Quick Links */}
-            <Card className="border-border shadow-sm">
-                <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <Link href="/dashboard/supervisor/attendance">
-                        <Button
-                            variant="outline"
-                            className="w-full h-20 flex-col gap-2 hover:bg-green-50 dark:hover:bg-green-950 bg-transparent"
-                        >
-                            <Clock className="h-5 w-5" />
-                            <span className="text-xs">Mark Attendance</span>
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/supervisor/materials">
-                        <Button
-                            variant="outline"
-                            className="w-full h-20 flex-col gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 bg-transparent"
-                        >
-                            <AlertCircle className="h-5 w-5" />
-                            <span className="text-xs">Request Materials</span>
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/supervisor/labors">
-                        <Button
-                            variant="outline"
-                            className="w-full h-20 flex-col gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 bg-transparent"
-                        >
-                            <AlertCircle className="h-5 w-5" />
-                            <span className="text-xs">Request labours</span>
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/supervisor/reports">
-                        <Button
-                            variant="outline"
-                            className="w-full h-20 flex-col gap-2 hover:bg-purple-50 dark:hover:bg-purple-950 bg-transparent"
-                        >
-                            <Briefcase className="h-5 w-5" />
-                            <span className="text-xs">Daily Report</span>
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/supervisor/inventory">
-                        <Button
-                            variant="outline"
-                            className="w-full h-20 flex-col gap-2 hover:bg-orange-50 dark:hover:bg-orange-950 bg-transparent"
-                        >
-                            <AlertTriangle className="h-5 w-5" />
-                            <span className="text-xs">View Inventory</span>
-                        </Button>
-                    </Link>
-                </CardContent>
-            </Card>
+            <QuickActions projectId={project.id} />
 
         </div>
     )

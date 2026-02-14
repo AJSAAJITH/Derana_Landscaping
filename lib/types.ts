@@ -1,10 +1,12 @@
+import { Prisma } from "@/app/generated/prisma"
+
 export type Role = "SUPER_ADMIN" | "SUPERVISOR"
 export type ProjectStatus = "PENDING" | "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED"
 export type WorkerType = "PERMANENT" | "TEMPORARY"
 export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
 export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "MOBILE_PAYMENT" | "CHECK" | "OTHER"
 export type PayeeType = "LABORER" | "SUPERVISOR" | "SUPPLIER" | "OTHER"
-
+export type RequestType = "MATERIAL" | "LABOR" | "OTHER"
 
 export interface User {
     id: string
@@ -76,6 +78,17 @@ export type Project = {
     updatedAt: Date;
 };
 
+// Project Document upload
+export interface ProjectDocumentDTO {
+    id: string
+    projectId: string
+    title: string | null
+    url: string
+    fileType: string | null
+    uploadedBy: string | null
+    createdAt: string
+}
+
 // Laborer Type
 export interface Laborer {
     id: string
@@ -107,20 +120,7 @@ export interface Attendance {
     project?: Project
 }
 
-// Inventory Item Type
-export interface InventoryItem {
-    id: string
-    projectId: string
-    name: string
-    category?: string | null
-    unit?: string | null
-    quantity: number
-    initialQuantity?: number | null
-    threshold?: number | null
-    unitCost?: number | null
-    createdAt: Date
-    updatedAt: Date
-}
+
 
 
 // Material Request Item Type
@@ -182,7 +182,7 @@ export interface MaterialRequestUI {
     supervisor?: {
         id: string
         name: string
-        email?: string
+        email?: string | null
     }
 
     project?: {
@@ -191,6 +191,52 @@ export interface MaterialRequestUI {
     }
 
     items: MaterialRequestItemUI[]
+}
+
+export interface AdminRequestManagmentDTO {
+    id: string;
+    type: RequestType;
+    status: RequestStatus;
+
+    superVisorNote: string;
+    adminNote: string | null;
+
+    createdAt: string;
+    updatedAt: string;
+
+    supervisor: {
+        id: string;
+        name: string;
+        email: string | null;
+    };
+
+    project: {
+        id: string;
+        name: string;
+    };
+}
+
+export interface AdminRequestDetailsDTO {
+    id: string;
+    status: RequestStatus;
+    type: RequestType;
+
+    supervisorNote: string;
+    adminNote: string | null;
+
+    createdAt: string;
+    updatedAt: string;
+
+    supervisor: {
+        id: string;
+        name: string;
+        email: string | null;
+    };
+
+    project: {
+        id: string;
+        name: string;
+    };
 }
 
 
@@ -299,3 +345,77 @@ export type AttendanceRow = {
     hoursWorked?: number;
 }
 
+
+
+// Project Inventory Type (inventory items assigned to projects)
+
+export type ProjectInventoryWithItem =
+    Prisma.ProjectInventoryGetPayload<{
+        include: { inventoryItem: true };
+    }>;
+
+
+// ✅ Client-safe type for Project Inventory table
+export interface InventoryItemDTO {
+    id: string
+    name: string
+    unit: string | null
+    isActive: boolean
+    category: {
+        id: string
+        name: string
+    } | null
+}
+
+export interface ProjectInventorItemDTO {
+    id: string
+    projectId: string
+    inventoryItemId: string
+
+    quantity: number
+    initialQuantity: number | null
+    threshold: number | null
+    unitCost: number | null
+
+    createdAt: Date
+    updatedAt: Date
+
+    inventoryItem: InventoryItemDTO
+}
+
+export interface InventoryUsageCreateDTO {
+    projectInventoryId: string
+    quantity: number
+    note: string
+}
+
+// lib/types.ts
+export interface InventoryCheckoutItemDTO {
+    projectInventoryId: string
+    quantity: number
+}
+
+export interface InventoryCheckoutDTO {
+    projectId: string
+    note: string
+    items: InventoryCheckoutItemDTO[]
+}
+
+//// supervisor request Metirial
+export interface SupervisorRequestDTO {
+    id: string;
+    status: RequestStatus;
+    type: RequestType;
+    supervisorNote: string;
+    adminNote: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+/// inventory usage
+export interface GetInventoryUsageDTO {
+    projectId: string
+    projectInventoryId?: string
+    fromDate: string
+    toDate: string
+}

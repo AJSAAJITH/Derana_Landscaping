@@ -60,6 +60,12 @@ enum AssignmentStatus {
   HALF_DAY
 }
 
+enum RequestType {
+  MATERIAL
+  LABOR
+  OTHER
+}
+
 //////////////////////////////////////////////////
 // USER
 //////////////////////////////////////////////////
@@ -77,20 +83,18 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  assignedProjects Project[]         @relation("SupervisorProjects")
-  createdRequests  MaterialRequest[] @relation("RequestCreatedBy")
-  paymentsMade     Payment[]         @relation("PaymentsMadeBy")
+  assignedProjects Project[] @relation("SupervisorProjects")
+  paymentsMade     Payment[] @relation("PaymentsMadeBy")
 
-  dailyReports       DailyReport[]
-  attendances        Attendance[]
-  laborRequests      LaborRequest[]
-  inventoryUsageLogs InventoryUsageLog[]
+  supervisorPayments Payment[] // ✅ FIX 3
 
-  materialRequests MaterialRequest[]
-  payments         Payment[]
-
+  dailyReports          DailyReport[]
+  attendances           Attendance[]
+  inventoryUsageLogs    InventoryUsageLog[]
   dailyLaborAssignments DailyLaborAssignment[] @relation("AssignedByUser")
+
+  usageNotes UsageNote[]         @relation("UserUsageNotes")
+  requests   RequestManagement[]
 }
 
 //////////////////////////////////////////////////
@@ -107,25 +111,24 @@ model Project {
   endDate     DateTime?
   budget      Decimal?      @db.Decimal(12, 2)
   status      ProjectStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   assignedSupervisorId String?
   assignedSupervisor   User?   @relation("SupervisorProjects", fields: [assignedSupervisorId], references: [id])
 
-  // Relations
-  documents         ProjectDocument[]
-  inventoryItems    InventoryItem[]
-  inventoryLogs     InventoryUsageLog[]
-  materialRequests  MaterialRequest[]
-  laborRequests     LaborRequest[]
-  dailyReports      DailyReport[]
-  attendanceRecords Attendance[]
-  payments          Payment[]
-  incomes           Income[]
-  expenses          Expense[]
-
+  documents             ProjectDocument[]
+  inventoryStocks       ProjectInventory[]
+  inventoryLogs         InventoryUsageLog[]
+  dailyReports          DailyReport[]
+  attendanceRecords     Attendance[]
+  payments              Payment[]
+  incomes               Income[]
+  expenses              Expense[]
   dailyLaborAssignments DailyLaborAssignment[]
+
+  requests RequestManagement[]
 
   @@index([assignedSupervisorId])
 }
@@ -152,33 +155,6 @@ model ProjectDocument {
 // INVENTORY
 //////////////////////////////////////////////////
 
-model InventoryItem {
-  id        String @id @default(cuid())
-  projectId String
-  name      String
-
-  // category ref
-  categoryId  String?
-  categoryRef MaterialCategory? @relation(fields: [categoryId], references: [id])
-
-  unit            String?
-  quantity        Float    @default(0)
-  initialQuantity Float?
-  threshold       Float?
-  unitCost        Decimal? @db.Decimal(12, 2)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  usageLogs            InventoryUsageLog[]
-  materialRequestItems MaterialRequestItem[]
-
-  @@unique([projectId, name, categoryId])
-  @@index([projectId])
-  @@index([categoryId])
-}
-
 model MaterialCategory {
   id       String  @id @default(cuid())
   name     String  @unique
@@ -190,64 +166,99 @@ model MaterialCategory {
   inventoryItems InventoryItem[]
 }
 
-model InventoryUsageLog {
-  id              String   @id @default(cuid())
-  inventoryItemId String
+model InventoryItem {
+  id         String  @id @default(cuid())
+  name       String
+  unit       String?
+  categoryId String?
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category      MaterialCategory?  @relation(fields: [categoryId], references: [id])
+  projectStocks ProjectInventory[]
+
+  @@unique([name, categoryId])
+  @@index([categoryId])
+}
+
+model ProjectInventory {
+  id              String @id @default(cuid())
   projectId       String
-  supervisorId    String?
-  quantity        Float
-  note            String?
-  createdAt       DateTime @default(now())
+  inventoryItemId String
 
-  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  quantity        Float    @default(0)
+  initialQuantity Float?
+  threshold       Float?
+  unitCost        Decimal? @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supervisor    User?         @relation(fields: [supervisorId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
 
-  @@index([inventoryItemId])
+  usageLogs InventoryUsageLog[]
+
+  @@unique([projectId, inventoryItemId, unitCost])
   @@index([projectId])
+  @@index([inventoryItemId])
+}
+
+model InventoryUsageLog {
+  id                 String   @id @default(cuid())
+  projectId          String
+  projectInventoryId String
+  supervisorId       String?
+  usageNoteId        String?
+  quantity           Float
+  createdAt          DateTime @default(now())
+
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectInventory ProjectInventory @relation(fields: [projectInventoryId], references: [id], onDelete: Cascade)
+  supervisor       User?            @relation(fields: [supervisorId], references: [id])
+  usageNote        UsageNote?       @relation(fields: [usageNoteId], references: [id])
+
+  @@index([projectId])
+  @@index([projectInventoryId])
+  @@index([createdAt])
+}
+
+model UsageNote {
+  id           String   @id @default(cuid())
+  note         String
+  createdAt    DateTime @default(now())
+  supervisorId String
+
+  logs       InventoryUsageLog[]
+  supervisor User                @relation(fields: [supervisorId], references: [id], name: "UserUsageNotes")
 }
 
 //////////////////////////////////////////////////
-// MATERIAL REQUESTS
+//  REQUESTS Management
 //////////////////////////////////////////////////
 
-model MaterialRequest {
-  id            String        @id @default(cuid())
-  projectId     String
-  supervisorId  String
-  status        RequestStatus @default(PENDING)
-  note          String?
-  adminResponse String?
-  respondedAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+model RequestManagement {
+  id           String @id @default(cuid())
+  projectId    String
+  supervisorId String
+
+  type   RequestType
+  status RequestStatus @default(PENDING)
+
+  supervisorNote String
+  adminNote      String?
+
+  createdAt DateTime @default(now()) // supervisor request time
+  updatedAt DateTime @updatedAt // admin response time
 
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supervisor User    @relation("RequestCreatedBy", fields: [supervisorId], references: [id], onDelete: Cascade)
-
-  items  MaterialRequestItem[]
-  user   User?                 @relation(fields: [userId], references: [id])
-  userId String?
+  supervisor User    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([supervisorId])
-}
-
-model MaterialRequestItem {
-  id                String   @id @default(cuid())
-  materialRequestId String
-  inventoryItemId   String?
-  name              String
-  quantity          Float
-  unit              String?
-  unitCost          Decimal? @db.Decimal(10, 2)
-  totalCost         Decimal? @db.Decimal(12, 2)
-
-  materialRequest MaterialRequest @relation(fields: [materialRequestId], references: [id], onDelete: Cascade)
-  inventoryItem   InventoryItem?  @relation(fields: [inventoryItemId], references: [id])
-
-  @@index([materialRequestId])
-  @@index([inventoryItemId])
+  @@index([status])
 }
 
 //////////////////////////////////////////////////
@@ -323,28 +334,6 @@ model DailyLaborAssignment {
 
   @@unique([projectId, laborerId, date])
   @@index([projectId, date])
-}
-
-// LABOR REQUESTS
-model LaborRequest {
-  id            String        @id @default(cuid())
-  projectId     String
-  supervisorId  String
-  requestedType String
-  quantity      Int
-  daysRequired  Int?
-  status        RequestStatus @default(PENDING)
-  note          String?
-  adminResponse String?
-  respondedAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supervisor User    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-
-  @@index([projectId])
-  @@index([supervisorId])
 }
 
 //////////////////////////////////////////////////

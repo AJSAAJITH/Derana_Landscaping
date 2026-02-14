@@ -49,11 +49,13 @@ export default function AddNewCategoryDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2  bg-green-600 hover:bg-green-700 w-full sm:w-auto">
                     <Plus className="w-4 h-4" />
                     Add Category
                 </Button>
             </DialogTrigger>
+
+
 
             <DialogContent className="max-w-sm">
                 <DialogHeader>

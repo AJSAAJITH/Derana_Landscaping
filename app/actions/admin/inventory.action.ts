@@ -1,239 +1,339 @@
 "use server";
 
-import { ActionResult } from "@/lib/action-result";
-import { getAuthUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { AddProjectInventoryInput, addProjectInventorySchema, createInventoryItemSchema, updateProjectInventorySchema } from "@/lib/validators/inventory.validation";
+import type { ActionResult } from "@/lib/action-result";
+import { getAuthUser } from "@/lib/auth";
 import { requireRole } from "@/lib/rbac";
-import { InventoryItem } from "@/lib/types";
-import { createInventoryItemSchema, deleteInventoryItemSchema, updateInventoryItemSchema } from "@/lib/validators/inventory.validation";
+import { InventoryItemDTO, ProjectInventorItemDTO } from "@/lib/types";
+import z from "zod";
+import { Prisma } from "@/app/generated/prisma";
+import { ProjectInventoryItemmapToDTO } from "@/lib/mapper.dto/project.inventoryMapper";
 
-export async function createInventoryItem(input: {
-    projectId: string
-    name: string
-    categoryId: string
-    unit?: string
-    quantity: number
-    threshold?: number
-    unitCost?: number
-}): Promise<ActionResult> {
+// Inventory Item Actions
+export async function createInventoryItem(
+    payload: unknown
+): Promise<ActionResult> {
     try {
 
         const { user } = await getAuthUser();
+        if (!user) {
+            return {
+                success: false,
+                message: "UnAuthorize",
+                code: "UNAUTHORIZED"
+            }
+        }
         requireRole(user, ["SUPER_ADMIN"]);
 
-        const parsed = createInventoryItemSchema.safeParse(input);
+        const parsed = createInventoryItemSchema.safeParse(payload);
+
         if (!parsed.success) {
             const fieldErrors: Record<string, string> = {};
-            parsed.error.issues.forEach((err) => {
-                const field = err.path[0] as string;
-                fieldErrors[field] = err.message;
+
+            parsed.error.issues.forEach((issue) => {
+                fieldErrors[issue.path[0] as string] = issue.message;
             });
+
             return {
                 success: false,
                 code: "VALIDATION_ERROR",
                 fieldErrors,
             };
-        };
-
-        // check project exsist & get category Id
-        const exsistProject = await prisma.materialCategory.findUnique({
-            where: { id: input.categoryId },
-            select: { id: true }
-        });
-
-        if (!exsistProject) {
-            return {
-                success: false,
-                code: "NOT_FOUND",
-                message: "Category Not Found",
-            };
         }
 
-        // check inventroy Exsits
-        const checkInventoryItemExsist = await prisma.inventoryItem.findFirst({
+        const { name, categoryId, unit } = parsed.data;
+
+        // ✅ Duplicate check
+        const exists = await prisma.inventoryItem.findFirst({
             where: {
-                projectId: input.projectId,
-                name: input.name,
-                categoryId: input.categoryId
+                name: {
+                    equals: name,
+                    mode: "insensitive",
+                },
+                categoryId,
             },
         });
-        if (checkInventoryItemExsist) {
+
+        if (exists) {
             return {
                 success: false,
                 code: "ALREADY_EXISTS",
-                message: "Inventory Item Already exsist in the Project",
+                message: "Item already exists in this category",
             };
         }
 
-        await prisma.inventoryItem.create({
+        // ✅ Correct create
+        const item = await prisma.inventoryItem.create({
             data: {
-                projectId: input.projectId,
-                name: input.name,
-                categoryId: input.categoryId,
-                unit: input.unit,
-                quantity: input.quantity,
-                initialQuantity: input.quantity,
-                threshold: input.threshold,
-                unitCost: input.unitCost,
+                name,
+                unit,
+                categoryId,
+            },
+            include: {
+                category: true,
             },
         });
 
         return {
             success: true,
-            message: "Inventory Item create successfully",
-        }
-
+            message: "new Intentory Item create successfull",
+        };
     } catch (error) {
-        console.error("createInventoryItem failed:", error);
+        console.error("Add new Inventory Item:", error);
         return {
             success: false,
             code: "SERVER_ERROR",
-            message: "Inventory Item creation faled"
+            message: "Something went wrong in Add new Inventory Item",
+        };
+    }
+}
+
+// ProjectInventory Actions
+export async function getInventoryItems(): Promise<ActionResult<InventoryItemDTO[]>> {
+    try {
+
+        const { user } = await getAuthUser();
+        if (!user) {
+            return {
+                success: false,
+                code: "UNAUTHORIZED",
+                message: "Unauthorized",
+            }
+        }
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const result = await prisma.inventoryItem.findMany(
+            {
+                where: { isActive: true },
+                include: { category: true },
+                orderBy: { name: "asc" },
+            }
+        );
+
+        if (result.length === 0) {
+            return {
+                success: false,
+                code: "NOT_FOUND",
+                message: "No inventory items found",
+            };
+        }
+        return {
+            success: true,
+            data: result,
+            message: "Inventory Items loading success"
+        }
+
+    } catch (error) {
+        console.error("get Inventory Items", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Something went wrong with get Inventory Items"
         }
     }
 }
 
-export async function getAllInventoryItems(projectId: string): Promise<ActionResult<InventoryItem[]>> {
+/// ProjectInventory
+export async function addOrUpdateProjectInventory(
+    input: AddProjectInventoryInput
+): Promise<ActionResult<ProjectInventorItemDTO>> {
+    try {
+        const parsed = addProjectInventorySchema.parse(input)
+
+        // 1️⃣ Try to find SAME project + SAME item + SAME unitCost
+        const existing = await prisma.projectInventory.findFirst({
+            where: {
+                projectId: parsed.projectId,
+                inventoryItemId: parsed.inventoryItemId,
+                unitCost:
+                    parsed.unitCost != null
+                        ? new Prisma.Decimal(parsed.unitCost)
+                        : null,
+            },
+            include: { inventoryItem: true },
+        })
+
+        if (existing) {
+            // 2️⃣ Same unit cost → UPDATE quantity
+            const updated = await prisma.projectInventory.update({
+                where: { id: existing.id }, // 👈 use ID, not composite key
+                data: {
+                    quantity: existing.quantity + parsed.quantity,
+                    threshold: parsed.threshold ?? existing.threshold,
+                },
+                include: { inventoryItem: true },
+            })
+
+            return {
+                success: true,
+                message: `Inventory updated. New quantity: ${updated.quantity}`,
+                data: ProjectInventoryItemmapToDTO(updated),
+            }
+        }
+
+        // 3️⃣ Different unit cost → CREATE new row
+        const created = await prisma.projectInventory.create({
+            data: {
+                projectId: parsed.projectId,
+                inventoryItemId: parsed.inventoryItemId,
+                quantity: parsed.quantity,
+                initialQuantity: parsed.quantity,
+                threshold: parsed.threshold,
+                unitCost:
+                    parsed.unitCost != null
+                        ? new Prisma.Decimal(parsed.unitCost)
+                        : null,
+            },
+            include: { inventoryItem: true },
+        })
+
+        return {
+            success: true,
+            message: "Inventory item added with different unit cost",
+            data: ProjectInventoryItemmapToDTO(created),
+        }
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return {
+                success: false,
+                code: "VALIDATION_ERROR",
+                message: error.issues.map(e => e.message).join(", "),
+            }
+        }
+
+        console.error("addOrUpdateProjectInventory error:", error)
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Something went wrong",
+        }
+    }
+}
+
+
+export async function getProjectInventoryItems(
+    projectId: string,
+): Promise<ActionResult<ProjectInventorItemDTO[]>> {
     try {
         const { user } = await getAuthUser();
+        if (!user) {
+            return {
+                success: false,
+                code: "UNAUTHORIZED",
+                message: "Unauthorized user",
+            }
+        }
         requireRole(user, ["SUPER_ADMIN"]);
+
         if (!projectId) {
             return {
                 success: false,
                 code: "VALIDATION_ERROR",
-                message: "Project Id is required",
+                message: "Project ID is required",
             }
         }
-        const items = await prisma.inventoryItem.findMany({
+
+        const items = await prisma.projectInventory.findMany({
             where: { projectId },
-            select: {
-                id: true,
-                projectId: true,
-                name: true,
-                unit: true,
-                quantity: true,
-                initialQuantity: true,
-                threshold: true,
-                unitCost: true,
-                categoryId: true,
-                createdAt: true,
-                updatedAt: true,
-                categoryRef: {
-                    select: {
-                        name: true,
-                    },
+            include: {
+                inventoryItem: {
+                    include: { category: true },
                 },
             },
-        });
-
-        const mappedItems: InventoryItem[] = items.map((item) => ({
-            id: item.id,
-            projectId: item.projectId,
-            name: item.name,
-            categoryId: item.categoryId,
-            category: item.categoryRef?.name ?? null,
-            unit: item.unit,
-            quantity: item.quantity,
-            initialQuantity: item.initialQuantity,
-            threshold: item.threshold,
-            unitCost: item.unitCost ? Number(item.unitCost) : null,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-        }));
-
+            orderBy: {
+                createdAt: "desc",
+            },
+        })
         return {
             success: true,
-            data: mappedItems,
-        };
+            data: items.map(ProjectInventoryItemmapToDTO),
+        }
 
     } catch (error) {
-        console.error("Inventory Items Fetching Failed", error);
+        console.error("getProjectInventoryItems error:", error);
         return {
             success: false,
             code: "SERVER_ERROR",
-            message: "Inventory Items Fetching Failed"
+            message: "get project inventory items failed",
         };
     }
 }
 
-export async function updateInventoryItem(
-    input: unknown
-): Promise<ActionResult> {
+
+////// Inventory managment actions
+
+// ==============================
+// UPDATE Project Inventory Item
+// ==============================
+export async function updateProjectInventoryItem(
+    payload: unknown
+): Promise<ActionResult<ProjectInventorItemDTO>> {
     try {
         const { user } = await getAuthUser();
+        if (!user) {
+            return {
+                success: false,
+                code: "UNAUTHORIZED",
+                message: "Unauthorized",
+            };
+        }
+
         requireRole(user, ["SUPER_ADMIN"]);
 
-        const parsed = updateInventoryItemSchema.safeParse(input);
+        const parsed = updateProjectInventorySchema.safeParse(payload);
         if (!parsed.success) {
-            const fieldErrors: Record<string, string> = {};
-            parsed.error.issues.forEach((err) => {
-                fieldErrors[err.path[0] as string] = err.message;
-            });
-
             return {
                 success: false,
                 code: "VALIDATION_ERROR",
-                fieldErrors,
+                message: parsed.error.issues.map(i => i.message).join(", "),
             };
         }
 
-        const {
-            id,
-            projectId,
-            name,
-            categoryId,
-            unit,
-            threshold,
-            unitCost,
-            addQuantity,
-        } = parsed.data;
+        const { projectInventoryId, name, quantity, threshold } = parsed.data;
 
-        const existingItem = await prisma.inventoryItem.findUnique({
-            where: { id },
+        // 1️⃣ Load project inventory with item
+        const existing = await prisma.projectInventory.findUnique({
+            where: { id: projectInventoryId },
+            include: { inventoryItem: true },
         });
 
-        if (!existingItem) {
+        if (!existing) {
             return {
                 success: false,
                 code: "NOT_FOUND",
-                message: "Inventory Item not found",
+                message: "Inventory item not found",
             };
         }
 
-        // 🚫 THRESHOLD RULE
-        if (
-            addQuantity &&
-            existingItem.threshold !== null &&
-            existingItem.quantity > existingItem.threshold
-        ) {
-            return {
-                success: false,
-                code: "FORBIDDEN",
-                message:
-                    "Stock can only be added when quantity is below or equal to threshold",
-            };
-        }
-
+        // 2️⃣ Update inventory item name
         await prisma.inventoryItem.update({
-            where: { id },
+            where: { id: existing.inventoryItemId },
+            data: { name },
+        });
+
+        // 3️⃣ Update project inventory values
+        const updated = await prisma.projectInventory.update({
+            where: { id: projectInventoryId },
             data: {
-                name,
-                categoryId,
-                unit,
-                threshold,
-                unitCost,
-                quantity: addQuantity
-                    ? existingItem.quantity + addQuantity
-                    : existingItem.quantity,
+                quantity,
+                threshold: threshold ?? null,
+            },
+            include: {
+                inventoryItem: {
+                    include: { category: true },
+                },
             },
         });
 
         return {
             success: true,
-            message: "Inventory item updated successfully",
+            message: "Inventory item updated",
+            data: ProjectInventoryItemmapToDTO(updated),
         };
+
     } catch (error) {
-        console.error("UpdateInventoryItem failed:", error);
+        console.error("updateProjectInventoryItem error:", error);
         return {
             success: false,
             code: "SERVER_ERROR",
@@ -242,77 +342,74 @@ export async function updateInventoryItem(
     }
 }
 
-
-export async function deleteInventoryItem(input: {
-    id: string;
-    projectId: string;
-}): Promise<ActionResult> {
+export async function deleteProjectInventoryItem(
+    id: string
+): Promise<ActionResult<null>> {
     try {
-        /* ───────── AUTH & RBAC ───────── */
-        const { user } = await getAuthUser();
-        requireRole(user, ["SUPER_ADMIN"]);
+        await prisma.projectInventory.delete({
+            where: { id },
+        });
+        return {
+            success: true,
+            message: "Item deleted",
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: "Failed to delete item",
+        };
+    }
+}
 
-        /* ───────── VALIDATION ───────── */
-        const parsed = deleteInventoryItemSchema.safeParse(input);
-        if (!parsed.success) {
-            const fieldErrors: Record<string, string> = {};
-            parsed.error.issues.forEach((err) => {
-                fieldErrors[err.path[0] as string] = err.message;
-            });
+export interface ProjectInventoryOverviewItem {
+    id: string;
+    name: string;
+    quantity: number;
+    unit: string | null;
+    unitCost: number | null;
+}
 
-            return {
-                success: false,
-                code: "VALIDATION_ERROR",
-                fieldErrors,
-            };
-        }
-
-        /* ───────── FIND ITEM ───────── */
-        const item = await prisma.inventoryItem.findFirst({
+export async function getProjectInventoryOverview(
+    projectId: string
+): Promise<ActionResult<ProjectInventoryOverviewItem[]>> {
+    try {
+        const items = await prisma.projectInventory.findMany({
             where: {
-                id: input.id,
-                projectId: input.projectId,
+                projectId,
             },
             select: {
                 id: true,
-                usageLogs: { select: { id: true }, take: 1 },
-                materialRequestItems: { select: { id: true }, take: 1 },
+                quantity: true,
+                unitCost: true,
+                inventoryItem: {
+                    select: {
+                        name: true,
+                        unit: true,
+                    },
+                },
             },
-        });
-
-        if (!item) {
-            return {
-                success: false,
-                code: "NOT_FOUND",
-                message: "Inventory item not found",
-            };
-        }
-
-        /* ───────── SAFETY CHECK ───────── */
-        if (item.usageLogs.length > 0 || item.materialRequestItems.length > 0) {
-            return {
-                success: false,
-                code: "CONFLICT",
-                message:
-                    "Cannot delete item because it has usage or request history",
-            };
-        }
-
-        /* ───────── DELETE ───────── */
-        await prisma.inventoryItem.delete({
-            where: { id: input.id },
+            orderBy: {
+                inventoryItem: {
+                    name: "asc",
+                },
+            },
         });
 
         return {
             success: true,
-            message: "Inventory item deleted successfully",
+            data: items.map(item => ({
+                id: item.id,
+                name: item.inventoryItem.name,
+                quantity: item.quantity,
+                unit: item.inventoryItem.unit,
+                unitCost: item.unitCost ? Number(item.unitCost) : null,
+            })),
         };
     } catch (error) {
-        console.error("DELETE INVENTORY ITEM ERROR:", error);
+        console.error(error);
         return {
             success: false,
-            code: "SERVER_ERROR",
-            message: "Failed to delete inventory item",
+            message: "Failed to load project inventory overview",
         };
     }
 }

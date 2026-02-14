@@ -4,8 +4,6 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Users } from "lucide-react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 import { Project } from "@/lib/types"
@@ -20,19 +18,8 @@ import { ProjectInventory } from "./components/ProjectInventory"
 import { ProjectMaterialRequests } from "./components/ProjectMeterialRequest"
 import { ProjectFinancialSummary } from "./components/ProjectFinancialSummary"
 import { ProjectSummaryCard } from "./components/ProjectSummeryCard"
+import { getProjectInventoryOverview, ProjectInventoryOverviewItem } from "@/app/actions/admin/inventory.action"
 
-/* ---------------- MOCK DATA (TEMP) ---------------- */
-
-const mockInventory = [
-    { item: "Grass Seeds", unit: "kg", quantity: 500 },
-    { item: "Fertilizer", unit: "bags", quantity: 200 },
-    { item: "Plants", unit: "pcs", quantity: 1500 },
-]
-
-const mockMaterialRequests = [
-    { id: "1", item: "Additional Fertilizer", quantity: 50, status: "approved", date: "2024-01-20" },
-    { id: "2", item: "Landscape Stones", quantity: 100, status: "pending", date: "2024-01-22" },
-]
 
 const mockFinancials = {
     totalBudget: 250000,
@@ -41,14 +28,6 @@ const mockFinancials = {
     income: 0,
     expense: 162500,
 }
-
-const mockDocuments = [
-    { id: "1", title: "Project Proposal", link: "/documents/project-proposal.pdf", uploadDate: "2024-01-15" },
-]
-
-const mockLaborAttendance = [
-    { id: "1", name: "John Doe", role: "Labourer", checkIn: "08:00", checkOut: "17:00", hours: 9, date: "2024-01-25" },
-]
 
 const mockDailyUpdates = [
     {
@@ -63,7 +42,6 @@ const mockDailyUpdates = [
     },
 ]
 
-/* ---------------- COMPONENT ---------------- */
 
 export default function ProjectDetailsPage({ projectId }: { projectId: string }) {
     const [project, setProject] = useState<Project | null>(null)
@@ -72,6 +50,16 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
     const [endDate, setEndDate] = useState<Date | undefined>()
     const [editingDates, setEditingDates] = useState(false)
     const [savingDates, setSavingDates] = useState(false)
+    const [inventory, setInventory] = useState<ProjectInventoryOverviewItem[]>([]);
+
+    const loadInventory = async () => {
+        const result = await getProjectInventoryOverview(projectId);
+        if (!result.success) {
+            toast.error(result.message ?? "Failed to load inventory");
+        }
+        setInventory(result.data || []);
+        return;
+    }
 
     const loadProject = async () => {
         setLoading(true)
@@ -91,6 +79,7 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
 
     useEffect(() => {
         loadProject()
+        loadInventory();
     }, [projectId])
 
     const handleUpdateDates = async () => {
@@ -141,7 +130,7 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
 
             {/* ACTION DIALOGS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <ProjectDocuments initialDocuments={mockDocuments} />
+                <ProjectDocuments projectId={projectId} />
                 {/* <ProjectLabourAttendance attendance={mockLaborAttendance} /> */}
                 <Link href={`/dashboard/admin/projects/${projectId}/attendance`}>
                     <Button className="gap-2 bg-green-600 hover:bg-green-700 w-full">
@@ -154,8 +143,8 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
             </div>
 
             {/* OTHER SECTIONS */}
-            <ProjectInventory inventory={mockInventory} projectId={projectId} />
-            <ProjectMaterialRequests requests={mockMaterialRequests} />
+            <ProjectInventory inventory={inventory} projectId={projectId} />
+            <ProjectMaterialRequests projectId={projectId} />
             <ProjectFinancialSummary financials={mockFinancials} />
         </div>
     )

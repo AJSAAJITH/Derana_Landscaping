@@ -2,7 +2,6 @@
 
 import { ActionResult } from "@/lib/action-result";
 import prisma from "@/lib/prisma";
-import { MaterialCategory } from "../generated/prisma";
 import { getAuthUser } from "@/lib/auth";
 import { requireRole } from "@/lib/rbac";
 import { CreateMaterialCategoryInput, createMaterialCategorySchema } from "@/lib/validators/materialCategory.validation";
@@ -66,11 +65,25 @@ export async function CreateMetirialCategory(
     }
 }
 
+export type MaterialCategory = {
+    id: string;
+    name: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+};
 
 export async function getMaterialCategories(): Promise<ActionResult<MaterialCategory[]>> {
     try {
 
         const { user } = await getAuthUser();
+        if (!user) {
+            return {
+                success: false,
+                code: "UNAUTHORIZED",
+                message: "Unauthorized access.",
+            };
+        }
         requireRole(user, ["SUPER_ADMIN"]);
 
         const categories = await prisma.materialCategory.findMany({

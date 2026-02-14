@@ -22,6 +22,7 @@ import {
 import { MoreHorizontal, Trash2, Eye, CirclePower } from "lucide-react";
 import ScrollableTable from "@/components/ScrollableTable";
 import Link from "next/link";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
     laborers: Laborer[];
@@ -71,19 +72,22 @@ export default function LaborTable({
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
 
-                <select
-                    className="w-full md:w-48 border rounded-md px-2 py-1"
+                <Select
                     value={filterStatus}
-                    onChange={(e) =>
-                        setFilterStatus(
-                            e.target.value as "all" | "active" | "inactive"
-                        )
+                    onValueChange={(value: "all" | "active" | "inactive") =>
+                        setFilterStatus(value)
                     }
                 >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
+                    <SelectTrigger className="w-full md:w-48">
+                        <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             {/* Table */}
@@ -91,7 +95,7 @@ export default function LaborTable({
                 <ScrollableTable maxHeight={280}>
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-slate-50">
+                            <TableRow className="">
                                 <TableHead>Name</TableHead>
                                 <TableHead>Phone</TableHead>
                                 <TableHead>NIC</TableHead>
@@ -139,14 +143,7 @@ export default function LaborTable({
                                                 </DropdownMenuTrigger>
 
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link
-                                                            href={`/admin/labours/${l.id}`}
-                                                        >
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            View
-                                                        </Link>
-                                                    </DropdownMenuItem>
+
 
                                                     <DropdownMenuItem
                                                         onClick={() =>

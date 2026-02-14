@@ -10,7 +10,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { BrickWall, Calendar, ChevronUp, CircleDollarSign, CreditCard, Home, Inbox, Pickaxe, Search, Settings, Store, User, User2, Workflow } from "lucide-react"
+import { BrickWall, Calendar, ChevronUp, CircleDollarSign, CreditCard, Home, Inbox, MessagesSquareIcon, Pickaxe, ScanBarcode, Search, Settings, Store, User, User2, Workflow } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
@@ -39,14 +39,19 @@ const items = [
         icon: Workflow,
     },
     {
-        title: "Materials",
-        url: "/dashboard/admin/materials",
-        icon: BrickWall,
+        title: "Requests",
+        url: "/dashboard/admin/requests",
+        icon: MessagesSquareIcon,
     },
     {
         title: "Labours",
         url: "/dashboard/admin/labours",
         icon: Pickaxe,
+    },
+    {
+        title: "Suplier",
+        url: "/dashboard/admin/suplier",
+        icon: ScanBarcode,
     },
     {
         title: "Finance",

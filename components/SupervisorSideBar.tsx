@@ -22,31 +22,6 @@ const supervisorMenuItems = [
         url: "/dashboard/supervisor",
         icon: Home,
     },
-    {
-        title: "Inventory",
-        url: "/dashboard/supervisor/inventory",
-        icon: ClipboardList,
-    },
-    {
-        title: "Material Requests",
-        url: "/dashboard/supervisor/materials",
-        icon: AlertCircle,
-    },
-    {
-        title: "Labor Requests",
-        url: "/dashboard/supervisor/labors",
-        icon: User,
-    },
-    {
-        title: "Attendance",
-        url: "/dashboard/supervisor/attendance",
-        icon: Users,
-    },
-    {
-        title: "Daily Reports",
-        url: "/dashboard/supervisor/reports",
-        icon: FileText,
-    },
 ]
 
 export default function SupervisorSidebar() {

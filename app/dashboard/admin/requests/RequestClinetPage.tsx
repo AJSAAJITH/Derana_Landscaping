@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
     Card,
     CardHeader,
@@ -20,123 +20,22 @@ import {
     TableCell,
 } from "@/components/ui/table";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-import { MaterialRequestUI } from "@/lib/types";
+import { AdminRequestDetailsDTO, MaterialRequestUI } from "@/lib/types";
 import { StatCard } from "./StartCard";
-import MaterialRequestDialog from "./MaterialRequestDialog";
-
-/* -------------------------------------------------------------------------- */
-/* Mock Data (replace with API later)                                          */
-/* -------------------------------------------------------------------------- */
-
-const SAMPLE_REQUESTS: MaterialRequestUI[] = [
-    {
-        id: "1",
-        status: "PENDING",
-        note: "Need urgent supply for upcoming site preparation",
-        createdAt: new Date(),
-        supervisor: {
-            id: "1",
-            name: "Kamal Silva",
-            email: "kamal@derana.com",
-        },
-        project: {
-            id: "1",
-            name: "Green Valley Park Landscaping",
-        },
-        items: [
-            {
-                id: "1",
-                name: "Garden Soil Premium Mix",
-                quantity: 100,
-                unit: "kg",
-                totalCost: 4500,
-            },
-            {
-                id: "2",
-                name: "Mulch - Wood Chips",
-                quantity: 8,
-                unit: "cubic meter",
-                totalCost: 20000,
-            },
-        ],
-    },
-    {
-        id: "2",
-        status: "APPROVED",
-        note: "Approved by Admin",
-        adminResponse: "Approved - Stock available",
-        createdAt: new Date("2024-03-15"),
-        supervisor: {
-            id: "2",
-            name: "Priya Perera",
-            email: "priya@derana.com",
-        },
-        project: {
-            id: "2",
-            name: "Residential Garden Project",
-        },
-        items: [
-            {
-                id: "3",
-                name: "Ornamental Plants",
-                quantity: 50,
-                unit: "pieces",
-                totalCost: 7500,
-            },
-        ],
-    },
-    {
-        id: "3",
-        status: "REJECTED",
-        note: "Requested materials are currently unavailable in inventory",
-        adminResponse: "Rejected due to insufficient stock and no approved supplier at this time",
-        createdAt: new Date("2024-03-18"),
-        supervisor: {
-            id: "3",
-            name: "Rajiv Kumar",
-            email: "rajiv@derana.com",
-        },
-        project: {
-            id: "3",
-            name: "Commercial Plaza Beautification",
-        },
-        items: [
-            {
-                id: "4",
-                name: "Hybrid Bermuda Grass Seed",
-                quantity: 30,
-                unit: "kg",
-                totalCost: 10500,
-            },
-            {
-                id: "5",
-                name: "Landscape Fabric Roll",
-                quantity: 100,
-                unit: "meters",
-                totalCost: 8500,
-            },
-        ],
-    }
-
-];
+import RequestDialog from "./RequestDialog";
+import { getAdminRequestById, getAllRequestManagement } from "@/app/actions/admin/request.inquary.action";
+import { toast } from "react-toastify";
 
 const ROWS_PER_PAGE = 10;
 
-/* -------------------------------------------------------------------------- */
-/* Component                                                                  */
-/* -------------------------------------------------------------------------- */
-
-function MeterialsInquary() {
-    /** ✅ FIX: define requests here */
-    const requests = SAMPLE_REQUESTS;
+function RequestInquary() {
 
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
-    const [selectedRequest, setSelectedRequest] =
-        useState<MaterialRequestUI | null>(null);
+    const [selectedRequest, setSelectedRequest] = useState<AdminRequestDetailsDTO | null>(null);
+    const [requests, setRequests] = useState<MaterialRequestUI[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    /* -------------------------------- Filters -------------------------------- */
 
     const filteredRequests = useMemo(() => {
         return requests.filter(
@@ -166,15 +65,66 @@ function MeterialsInquary() {
         }
     };
 
-    /* -------------------------------- Render --------------------------------- */
+    const handleView = async (id: string) => {
+        const result = await getAdminRequestById(id);
+
+        if (!result.success || !result.data) {
+            toast.error(result.message || "Failed to load request");
+            return;
+        }
+
+        setSelectedRequest(result.data);
+    };
+
+    async function loadRequests() {
+        const result = await getAllRequestManagement();
+
+        if (!result.success) {
+            toast.error(result.message || "Failed to load requests");
+            return;
+        }
+
+        const mapped: MaterialRequestUI[] =
+            result.data?.map((r) => ({
+                id: r.id,
+                status: r.status,
+                note: r.superVisorNote,
+                adminResponse: r.adminNote ?? undefined,
+                createdAt: new Date(r.createdAt),
+
+                supervisor: {
+                    id: r.supervisor.id,
+                    name: r.supervisor.name,
+                    email: r.supervisor.email,
+                },
+
+                project: {
+                    id: r.project.id,
+                    name: r.project.name,
+                },
+
+                items: [], // You can later load items separately
+            })) ?? [];
+
+        setRequests(mapped);
+        setLoading(false);
+    }
+
+
+    useEffect(() => {
+
+        loadRequests();
+    }, []);
+
+
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Material Requests</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">Requests Managment</h1>
                 <p className="text-muted-foreground mt-1">
-                    Review and manage supervisor material requests
+                    Review and manage supervisor material & labor requests
                 </p>
             </div>
 
@@ -223,18 +173,25 @@ function MeterialsInquary() {
                                 <TableRow>
                                     <TableHead>Supervisor</TableHead>
                                     <TableHead>Project</TableHead>
-                                    <TableHead className="text-center">Items</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Date</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
-
                             <TableBody>
-                                {paginated.length === 0 ? (
+                                {loading ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={6}
+                                            colSpan={5}
+                                            className="py-8 text-center text-muted-foreground"
+                                        >
+                                            Loading requests...
+                                        </TableCell>
+                                    </TableRow>
+                                ) : paginated.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={5}
                                             className="py-8 text-center text-muted-foreground"
                                         >
                                             No requests found
@@ -243,13 +200,17 @@ function MeterialsInquary() {
                                 ) : (
                                     paginated.map((request) => (
                                         <TableRow key={request.id}>
-                                            <TableCell>{request.supervisor?.name}</TableCell>
+                                            {/* Supervisor */}
+                                            <TableCell className="font-medium">
+                                                {request.supervisor?.name || "—"}
+                                            </TableCell>
+
+                                            {/* Project */}
                                             <TableCell className="text-muted-foreground">
-                                                {request.project?.name}
+                                                {request.project?.name || "—"}
                                             </TableCell>
-                                            <TableCell className="text-center">
-                                                {request.items?.length}
-                                            </TableCell>
+
+                                            {/* Status */}
                                             <TableCell>
                                                 <Badge
                                                     variant="outline"
@@ -258,14 +219,20 @@ function MeterialsInquary() {
                                                     {request.status}
                                                 </Badge>
                                             </TableCell>
+
+                                            {/* Created Date */}
                                             <TableCell className="text-muted-foreground">
-                                                {new Date(request.createdAt).toLocaleDateString()}
+                                                {request.createdAt
+                                                    ? new Date(request.createdAt).toLocaleDateString()
+                                                    : "—"}
                                             </TableCell>
+
+                                            {/* Action */}
                                             <TableCell className="text-right">
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => setSelectedRequest(request)}
+                                                    onClick={() => handleView(request.id)}
                                                 >
                                                     View
                                                 </Button>
@@ -274,6 +241,7 @@ function MeterialsInquary() {
                                     ))
                                 )}
                             </TableBody>
+
                         </Table>
                     </div>
 
@@ -305,13 +273,14 @@ function MeterialsInquary() {
             </Card>
 
             {/* Dialog */}
-            <MaterialRequestDialog
+            <RequestDialog
                 request={selectedRequest}
                 open={!!selectedRequest}
                 onClose={() => setSelectedRequest(null)}
+                onUpdated={loadRequests}
             />
         </div>
     );
 }
 
-export default MeterialsInquary;
+export default RequestInquary;
