@@ -419,3 +419,24 @@ export interface GetInventoryUsageDTO {
     fromDate: string
     toDate: string
 }
+
+// SUPLIER DTOS
+export interface CreateSupplierDTO {
+    name: string
+    phone: string
+    email?: string
+    address?: string
+    company?: string
+    isActive?: boolean
+}
+
+export interface SupplierResponseDTO {
+    id: string
+    name: string
+    phone: string
+    email?: string | null
+    address?: string | null
+    company?: string | null
+    isActive: boolean
+    createdAt: Date
+}

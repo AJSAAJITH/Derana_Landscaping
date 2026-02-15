@@ -372,9 +372,10 @@ model DailyReportPhoto {
 model Supplier {
   id       String  @id @default(cuid())
   name     String
-  phone    String?
+  phone    String
   email    String?
   address  String?
+  company  String?
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -382,6 +383,7 @@ model Supplier {
 
   payments Payment[]
 
+  @@unique([name, phone])
   @@index([name])
 }
 

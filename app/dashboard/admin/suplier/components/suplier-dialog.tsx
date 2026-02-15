@@ -1,12 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { createSupplierAction } from "@/app/actions/admin/suplier.action"
+import { toast } from "react-toastify"
+import { SupplierResponseDTO } from "@/lib/types"
 
 interface SupplierFormData {
     id?: string
@@ -14,27 +17,42 @@ interface SupplierFormData {
     phone: string
     email: string
     address: string
+    company: string
     isActive: boolean
 }
 
 interface SupplierDialogProps {
-    onSubmit: (data: SupplierFormData) => void
-    editingSupplier?: SupplierFormData | null
+    editingSupplier?: SupplierResponseDTO | null
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
+    onSuccess?: () => void
 }
 
-export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange }: SupplierDialogProps) {
-    const [open, setOpen] = useState(isOpen || false)
+export function SupplierDialog({ editingSupplier, isOpen, onOpenChange, onSuccess }: SupplierDialogProps) {
+    const [open, setOpen] = useState(isOpen || false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isPending, startTransition] = useTransition();
+
     const [formData, setFormData] = useState<SupplierFormData>(
-        editingSupplier || {
-            name: "",
-            phone: "",
-            email: "",
-            address: "",
-            isActive: true,
-        }
+        editingSupplier
+            ? {
+                name: editingSupplier.name,
+                phone: editingSupplier.phone,
+                email: editingSupplier.email ?? "",
+                address: editingSupplier.address ?? "",
+                company: editingSupplier.company ?? "",
+                isActive: editingSupplier.isActive,
+            }
+            : {
+                name: "",
+                phone: "",
+                email: "",
+                address: "",
+                company: "",
+                isActive: true,
+            }
     )
+
 
     const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen)
@@ -50,18 +68,31 @@ export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange
             phone: "",
             email: "",
             address: "",
+            company: "",
             isActive: true,
         })
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        if (!formData.name.trim()) {
-            alert("Supplier name is required")
-            return
-        }
-        onSubmit(formData)
-        handleOpenChange(false)
+        setErrors({})
+
+        startTransition(async () => {
+            const result = await createSupplierAction(formData)
+
+            if (!result.success) {
+                if (result.fieldErrors) {
+                    setErrors(result.fieldErrors)
+                }
+                return
+            }
+
+            // Success
+            toast.success("New suplier created");
+            resetForm()
+            handleOpenChange(false)
+            onSuccess?.();
+        })
     }
 
     return (
@@ -102,6 +133,11 @@ export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange
                             className="mt-1"
                             required
                         />
+                        {errors.name && (
+                            <p className="text-sm text-red-500 mt-1">
+                                {errors.name}
+                            </p>
+                        )}
                     </div>
 
                     {/* Phone */}
@@ -113,10 +149,16 @@ export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange
                             id="phone"
                             type="tel"
                             value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="Enter phone number"
-                            className="mt-1"
+                            onChange={(e) =>
+                                setFormData({ ...formData, phone: e.target.value })
+                            }
                         />
+
+                        {errors.phone && (
+                            <p className="text-sm text-red-500 mt-1">
+                                {errors.phone}
+                            </p>
+                        )}
                     </div>
 
                     {/* Email */}
@@ -132,6 +174,11 @@ export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange
                             placeholder="Enter email address"
                             className="mt-1"
                         />
+                        {errors.email && (
+                            <p className="text-sm text-red-500 mt-1">
+                                {errors.email}
+                            </p>
+                        )}
                     </div>
 
                     {/* Address */}
@@ -148,6 +195,20 @@ export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange
                             className="mt-1"
                         />
                     </div>
+                    {/* company */}
+                    <div>
+                        <Label htmlFor="email" className="text-sm font-medium">
+                            Company
+                        </Label>
+                        <Input
+                            id="company"
+                            type="text"
+                            value={formData.company}
+                            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                            placeholder="Enter company name"
+                            className="mt-1"
+                        />
+                    </div>
 
                     {/* Form Actions */}
                     <div className="flex gap-3 pt-4">
@@ -159,8 +220,12 @@ export function SupplierDialog({ onSubmit, editingSupplier, isOpen, onOpenChange
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
-                            {editingSupplier ? "Update" : "Add"} Supplier
+                        <Button
+                            type="submit"
+                            disabled={isPending}
+                            className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
+                        >
+                            {isPending ? "Saving..." : editingSupplier ? "Update" : "Add"} Supplier
                         </Button>
                     </div>
                 </form>
