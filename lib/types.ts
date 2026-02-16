@@ -454,6 +454,35 @@ export const PAYEE_TYPES = [
 
 export type PayeeType = typeof PAYEE_TYPES[number]
 
+// lib/dto/payment.dto.ts
+
+export interface CreatePaymentDTO {
+    projectId?: string
+    amount: number
+    method: "CASH" | "BANK_TRANSFER" | "CHECK"
+    payeeType: "LABORER" | "SUPERVISOR" | "SUPPLIER"
+
+    payeeId: string
+
+    reference?: string
+    note?: string
+    paidAt?: Date
+}
+
+// 
+export type PaymentDTO = {
+    id: string
+    date: string
+    projectName: string
+    payeeType: "LABORER" | "SUPERVISOR" | "SUPPLIER"
+    payeeName: string
+    amount: number
+    paymentMethod: string
+    reference: string
+}
+
+
+
 // todo
 // Todo Type
 export interface Todo {
@@ -462,4 +491,25 @@ export interface Todo {
     completed: boolean
     createdAt: Date
     updatedAt: Date
+}
+
+// finance
+export interface ProjectFinanceDTO {
+    id: string
+    projectName: string
+    totalIncome: number
+    totalExpenses: number
+    netProfit: number
+    status: "profit" | "loss"
+}
+
+export interface MonthlyChartDTO {
+    month: string
+    income: number
+    expenses: number
+}
+
+export interface ExpenseCategoryDTO {
+    name: string
+    value: number
 }

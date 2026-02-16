@@ -2,74 +2,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import PaymentTable from './componets/PayRecordTable'
 import AddPaymentDialog from './componets/AddPaymentDialog'
-import { PAYEE_TYPES, Project, PayeeType } from '@/lib/types'
-
-// Sample payments data
-const paymentsData = [
-    {
-        id: 1,
-        date: "2024-01-15",
-        projectName: "Central Park Landscaping",
-        payeeType: "LABORER" as PayeeType,
-        payeeName: "John Smith",
-        amount: 1500,
-        paymentMethod: "Bank Transfer",
-        reference: "PAY-2024-001",
-    },
-    {
-        id: 2,
-        date: "2024-01-18",
-        projectName: "Downtown Plaza Renovation",
-        payeeType: "SUPERVISOR" as PayeeType,
-        payeeName: "Sarah Johnson",
-        amount: 3500,
-        paymentMethod: "Check",
-        reference: "PAY-2024-002",
-    },
-    {
-        id: 3,
-        date: "2024-01-20",
-        projectName: "Commercial Grounds Maintenance",
-        payeeType: "SUPPLIER" as PayeeType,
-        payeeName: "Green Materials Inc",
-        amount: 5200,
-        paymentMethod: "Bank Transfer",
-        reference: "PAY-2024-003",
-    },
-    {
-        id: 4,
-        date: "2024-01-22",
-        projectName: "Residential Garden Design",
-        payeeType: "LABORER" as PayeeType,
-        payeeName: "Mike Wilson",
-        amount: 1200,
-        paymentMethod: "Cash",
-        reference: "PAY-2024-004",
-    },
-    {
-        id: 5,
-        date: "2024-01-25",
-        projectName: "Highway Beautification Project",
-        payeeType: "SUPPLIER" as PayeeType,
-        payeeName: "Equipment Rentals Ltd",
-        amount: 4800,
-        paymentMethod: "Bank Transfer",
-        reference: "PAY-2024-005",
-    },
-    {
-        id: 6,
-        date: "2024-01-28",
-        projectName: "Central Park Landscaping",
-        payeeType: "LABORER" as PayeeType,
-        payeeName: "Emma Davis",
-        amount: 1800,
-        paymentMethod: "Check",
-        reference: "PAY-2024-006",
-    },
-]
+import { PAYEE_TYPES, Project, PayeeType, PaymentDTO } from '@/lib/types'
+import { deletePaymentAction, getPaymentsAction } from '@/app/actions/admin/payment.action'
+import { Spinner } from '@/components/ui/spinner'  // optional spinner if you have one
+import { SkeletonTable } from '@/components/SkeletonTableView'
+import { toast } from 'react-toastify'
 
 interface PaymentClientProps {
     projects: Project[]
@@ -80,7 +20,24 @@ function PaymentClient({ projects }: PaymentClientProps) {
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedProject, setSelectedProject] = useState("all")
     const [selectedPayeeType, setSelectedPayeeType] = useState<PayeeType | "all">("all")
-    const [payments, setPayments] = useState(paymentsData)
+    const [payments, setPayments] = useState<PaymentDTO[]>([]) // ✅ Corrected type
+    const [loading, setLoading] = useState(true)
+
+    // Load payments on mount
+    useEffect(() => {
+        loadPayments()
+    }, [])
+
+    const loadPayments = async () => {
+        setLoading(true)
+        const result = await getPaymentsAction()
+
+        if (result.success && result.data) {
+            setPayments(result.data)
+        }
+
+        setLoading(false)
+    }
 
     const filteredPayments = payments.filter((payment) => {
         const searchMatch =
@@ -97,8 +54,23 @@ function PaymentClient({ projects }: PaymentClientProps) {
         return searchMatch && projectMatch && payeeTypeMatch
     })
 
-    const handleDelete = (id: number) => {
-        setPayments(payments.filter((p) => p.id !== id))
+    const handleDelete = async (id: string) => {
+        const previousPayments = payments
+
+        // 🔥 Optimistic UI update
+        setPayments((prev) => prev.filter((p) => p.id !== id))
+
+        const result = await deletePaymentAction(id)
+
+        if (!result.success) {
+            //  rollback if failed
+            setPayments(previousPayments);
+            toast.error(result.message || "Delete failed");
+            return;
+        }
+
+        toast.success("Payment deleted successfully");
+        loadPayments();
     }
 
     const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
@@ -115,10 +87,14 @@ function PaymentClient({ projects }: PaymentClientProps) {
                     </p>
                 </div>
 
-                <AddPaymentDialog projects={projects} />
+                <AddPaymentDialog projects={projects} onSubmit={loadPayments} />
             </div>
 
+            {/* Loading state */}
+            {loading && <Spinner className="my-4 mx-auto" />}
+
             {/* Summary Card */}
+
             <Card>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
@@ -126,16 +102,22 @@ function PaymentClient({ projects }: PaymentClientProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl sm:text-3xl font-bold text-emerald-600">
-                        ${(totalAmount / 1000).toFixed(1)}K
+                    <p className="text-2xl sm:text-3xl font-bold text-amber-600">
+                        {new Intl.NumberFormat("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                        }).format(totalAmount)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                        {filteredPayments.length} transaction{filteredPayments.length !== 1 ? "s" : ""}
+                        {filteredPayments.length} transaction
+                        {filteredPayments.length !== 1 ? "s" : ""}
                     </p>
                 </CardContent>
             </Card>
 
+
             {/* Filters */}
+
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg sm:text-xl">Filters</CardTitle>
@@ -189,7 +171,6 @@ function PaymentClient({ projects }: PaymentClientProps) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Types</SelectItem>
-
                                     {PAYEE_TYPES.map((type) => (
                                         <SelectItem key={type} value={type}>
                                             {type.charAt(0) + type.slice(1).toLowerCase()}
@@ -203,24 +184,30 @@ function PaymentClient({ projects }: PaymentClientProps) {
                 </CardContent>
             </Card>
 
+
             {/* Payments Table */}
+
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg sm:text-xl">
                         Payment Records
                     </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                        {filteredPayments.length} payment
-                        {filteredPayments.length !== 1 ? "s" : ""} found
+                        {filteredPayments.length} payment{filteredPayments.length !== 1 ? "s" : ""} found
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <PaymentTable
-                        payments={filteredPayments}
-                        onDelete={handleDelete}
-                    />
+                    {loading ? (
+                        <SkeletonTable />
+                    ) : (
+                        <PaymentTable
+                            payments={filteredPayments}
+                            onDelete={handleDelete}
+                        />
+                    )}
                 </CardContent>
             </Card>
+
 
         </div>
     )

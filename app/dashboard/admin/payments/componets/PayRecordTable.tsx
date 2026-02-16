@@ -10,18 +10,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { PaymentDTO } from "@/lib/types"
 import { Trash2 } from "lucide-react"
-
-export type Payment = {
-    id: number
-    date: string
-    projectName: string
-    payeeType: string
-    payeeName: string
-    amount: number
-    paymentMethod: string
-    reference: string
-}
 
 const payeeTypeColors: Record<string, string> = {
     LABORER: "bg-blue-100 text-blue-800",
@@ -31,8 +21,8 @@ const payeeTypeColors: Record<string, string> = {
 
 
 interface PaymentTableProps {
-    payments: Payment[]
-    onDelete: (id: number) => void
+    payments: PaymentDTO[]
+    onDelete: (id: string) => void
 }
 
 export default function PaymentTable({
@@ -80,13 +70,15 @@ export default function PaymentTable({
                             <TableCell>{payment.payeeName}</TableCell>
 
                             <TableCell className="text-right font-semibold text-emerald-600">
-                                ${payment.amount.toLocaleString()}
+                                RS.{payment.amount.toLocaleString()}
                             </TableCell>
 
                             <TableCell>{payment.paymentMethod}</TableCell>
 
                             <TableCell className="font-mono text-gray-600">
-                                {payment.reference}
+                                {payment.reference && payment.reference.trim() !== null
+                                    ? payment.reference
+                                    : "N/A"}
                             </TableCell>
 
                             <TableCell className="text-right">
@@ -94,7 +86,11 @@ export default function PaymentTable({
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                                    onClick={() => onDelete(payment.id)}
+                                    onClick={() => {
+                                        if (confirm("Are you sure you want to delete this payment?")) {
+                                            onDelete(payment.id)
+                                        }
+                                    }}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>

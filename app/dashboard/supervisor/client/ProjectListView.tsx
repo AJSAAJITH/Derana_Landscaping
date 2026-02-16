@@ -59,13 +59,22 @@ export default function ProjectsTable({
                                     {project.status}
                                 </Badge>
 
-                                <Link
-                                    href={`/dashboard/supervisor/projects/${project.id}`}
-                                >
-                                    <Button size="sm" className="cursor-pointer">
+                                {project.status === "ACTIVE" ? (
+                                    <Link href={`/dashboard/supervisor/projects/${project.id}`}>
+                                        <Button size="sm" className="cursor-pointer">
+                                            Explore
+                                        </Button>
+                                    </Link>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        disabled
+                                        className="cursor-not-allowed opacity-50"
+                                    >
                                         Explore
                                     </Button>
-                                </Link>
+                                )}
+
                             </div>
                         </div>
                     ))}

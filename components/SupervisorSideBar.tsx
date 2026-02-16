@@ -68,14 +68,12 @@ export default function SupervisorSidebar() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton>
-                                    <User2 /> Username
+                                    <User2 /> Sign Out
                                     <ChevronUp className="ml-auto" />
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" side="top" className="w-(--radix-popper-anchor-width)">
-                                <DropdownMenuItem>
-                                    <span>Account</span>
-                                </DropdownMenuItem>
+
                                 <DropdownMenuItem variant="destructive">
                                     <span>Sign out</span>
                                 </DropdownMenuItem>
