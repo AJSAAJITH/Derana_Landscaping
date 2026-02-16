@@ -29,8 +29,8 @@ const items = [
         icon: User,
     },
     {
-        title: "Calendar",
-        url: "/dashboard/admin/calender",
+        title: "TODO Save",
+        url: "/dashboard/admin/todo",
         icon: Calendar,
     },
     {
@@ -54,14 +54,14 @@ const items = [
         icon: ScanBarcode,
     },
     {
-        title: "Finance",
-        url: "/dashboard/admin/finance",
-        icon: CircleDollarSign,
-    },
-    {
         title: "Payments",
         url: "/dashboard/admin/payments",
         icon: CreditCard,
+    },
+    {
+        title: "Finance",
+        url: "/dashboard/admin/finance",
+        icon: CircleDollarSign,
     },
 
 ]

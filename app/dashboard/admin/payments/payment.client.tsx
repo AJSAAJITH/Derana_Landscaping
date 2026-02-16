@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import React, { useState } from 'react'
 import PaymentTable from './componets/PayRecordTable'
 import AddPaymentDialog from './componets/AddPaymentDialog'
-import { Project } from '@/lib/types'
+import { PAYEE_TYPES, Project, PayeeType } from '@/lib/types'
 
 // Sample payments data
 const paymentsData = [
@@ -13,7 +13,7 @@ const paymentsData = [
         id: 1,
         date: "2024-01-15",
         projectName: "Central Park Landscaping",
-        payeeType: "Laborer",
+        payeeType: "LABORER" as PayeeType,
         payeeName: "John Smith",
         amount: 1500,
         paymentMethod: "Bank Transfer",
@@ -23,7 +23,7 @@ const paymentsData = [
         id: 2,
         date: "2024-01-18",
         projectName: "Downtown Plaza Renovation",
-        payeeType: "Supervisor",
+        payeeType: "SUPERVISOR" as PayeeType,
         payeeName: "Sarah Johnson",
         amount: 3500,
         paymentMethod: "Check",
@@ -33,7 +33,7 @@ const paymentsData = [
         id: 3,
         date: "2024-01-20",
         projectName: "Commercial Grounds Maintenance",
-        payeeType: "Supplier",
+        payeeType: "SUPPLIER" as PayeeType,
         payeeName: "Green Materials Inc",
         amount: 5200,
         paymentMethod: "Bank Transfer",
@@ -43,7 +43,7 @@ const paymentsData = [
         id: 4,
         date: "2024-01-22",
         projectName: "Residential Garden Design",
-        payeeType: "Laborer",
+        payeeType: "LABORER" as PayeeType,
         payeeName: "Mike Wilson",
         amount: 1200,
         paymentMethod: "Cash",
@@ -53,7 +53,7 @@ const paymentsData = [
         id: 5,
         date: "2024-01-25",
         projectName: "Highway Beautification Project",
-        payeeType: "Supplier",
+        payeeType: "SUPPLIER" as PayeeType,
         payeeName: "Equipment Rentals Ltd",
         amount: 4800,
         paymentMethod: "Bank Transfer",
@@ -63,7 +63,7 @@ const paymentsData = [
         id: 6,
         date: "2024-01-28",
         projectName: "Central Park Landscaping",
-        payeeType: "Laborer",
+        payeeType: "LABORER" as PayeeType,
         payeeName: "Emma Davis",
         amount: 1800,
         paymentMethod: "Check",
@@ -77,13 +77,10 @@ interface PaymentClientProps {
 
 function PaymentClient({ projects }: PaymentClientProps) {
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedProject, setSelectedProject] = useState("all");
-    const [selectedPayeeType, setSelectedPayeeType] = useState("all");
-    const [payments, setPayments] = useState(paymentsData);
-
-
-    const payeeTypes = ["Laborer", "Supervisor", "Supplier"]
+    const [searchTerm, setSearchTerm] = useState("")
+    const [selectedProject, setSelectedProject] = useState("all")
+    const [selectedPayeeType, setSelectedPayeeType] = useState<PayeeType | "all">("all")
+    const [payments, setPayments] = useState(paymentsData)
 
     const filteredPayments = payments.filter((payment) => {
         const searchMatch =
@@ -91,8 +88,11 @@ function PaymentClient({ projects }: PaymentClientProps) {
             payment.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
             payment.projectName.toLowerCase().includes(searchTerm.toLowerCase())
 
-        const projectMatch = selectedProject === "all" || payment.projectName === selectedProject
-        const payeeTypeMatch = selectedPayeeType === "all" || payment.payeeType === selectedPayeeType
+        const projectMatch =
+            selectedProject === "all" || payment.projectName === selectedProject
+
+        const payeeTypeMatch =
+            selectedPayeeType === "all" || payment.payeeType === selectedPayeeType
 
         return searchMatch && projectMatch && payeeTypeMatch
     })
@@ -102,26 +102,36 @@ function PaymentClient({ projects }: PaymentClientProps) {
     }
 
     const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
+
     return (
         <div className="flex flex-col gap-4 p-4 sm:gap-6 sm:p-6">
+
             {/* Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Payments</h1>
-                    <p className="text-sm sm:text-base text-gray-500 mt-1">Manage all outgoing payments for projects and staff</p>
+                    <p className="text-sm sm:text-base text-gray-500 mt-1">
+                        Manage all outgoing payments for projects and staff
+                    </p>
                 </div>
-                {/* Add payment dialog */}
-                <AddPaymentDialog projects={projects} payeeTypes={payeeTypes} />
+
+                <AddPaymentDialog projects={projects} />
             </div>
 
             {/* Summary Card */}
             <Card>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Total Payments (Filtered)</CardTitle>
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                        Total Payments (Filtered)
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl sm:text-3xl font-bold text-emerald-600">${(totalAmount / 1000).toFixed(1)}K</p>
-                    <p className="text-xs text-gray-500 mt-1">{filteredPayments.length} transactions</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-emerald-600">
+                        ${(totalAmount / 1000).toFixed(1)}K
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                        {filteredPayments.length} transaction{filteredPayments.length !== 1 ? "s" : ""}
+                    </p>
                 </CardContent>
             </Card>
 
@@ -132,8 +142,11 @@ function PaymentClient({ projects }: PaymentClientProps) {
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+
                         <div className="flex-1">
-                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">Search</label>
+                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">
+                                Search
+                            </label>
                             <Input
                                 placeholder="Search..."
                                 value={searchTerm}
@@ -141,8 +154,11 @@ function PaymentClient({ projects }: PaymentClientProps) {
                                 className="h-9 sm:h-10"
                             />
                         </div>
+
                         <div className="flex-1">
-                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">Project</label>
+                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">
+                                Project
+                            </label>
                             <Select value={selectedProject} onValueChange={setSelectedProject}>
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
@@ -157,22 +173,32 @@ function PaymentClient({ projects }: PaymentClientProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+
                         <div className="flex-1">
-                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">Payee Type</label>
-                            <Select value={selectedPayeeType} onValueChange={setSelectedPayeeType}>
+                            <label className="mb-2 block text-xs sm:text-sm font-medium text-gray-700">
+                                Payee Type
+                            </label>
+                            <Select
+                                value={selectedPayeeType}
+                                onValueChange={(value) =>
+                                    setSelectedPayeeType(value as PayeeType | "all")
+                                }
+                            >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Types</SelectItem>
-                                    {payeeTypes.map((type) => (
+
+                                    {PAYEE_TYPES.map((type) => (
                                         <SelectItem key={type} value={type}>
-                                            {type}
+                                            {type.charAt(0) + type.slice(1).toLowerCase()}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
+
                     </div>
                 </CardContent>
             </Card>
@@ -180,15 +206,22 @@ function PaymentClient({ projects }: PaymentClientProps) {
             {/* Payments Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">Payment Records</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">
+                        Payment Records
+                    </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                        {filteredPayments.length} payment{filteredPayments.length !== 1 ? "s" : ""} found
+                        {filteredPayments.length} payment
+                        {filteredPayments.length !== 1 ? "s" : ""} found
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <PaymentTable payments={filteredPayments} onDelete={handleDelete} />
+                    <PaymentTable
+                        payments={filteredPayments}
+                        onDelete={handleDelete}
+                    />
                 </CardContent>
             </Card>
+
         </div>
     )
 }

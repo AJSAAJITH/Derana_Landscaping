@@ -24,10 +24,11 @@ export type Payment = {
 }
 
 const payeeTypeColors: Record<string, string> = {
-    Laborer: "bg-blue-100 text-blue-800",
-    Supervisor: "bg-purple-100 text-purple-800",
-    Supplier: "bg-orange-100 text-orange-800",
+    LABORER: "bg-blue-100 text-blue-800",
+    SUPERVISOR: "bg-purple-100 text-purple-800",
+    SUPPLIER: "bg-orange-100 text-orange-800",
 }
+
 
 interface PaymentTableProps {
     payments: Payment[]

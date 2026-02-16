@@ -421,6 +421,17 @@ model Payment {
   @@index([paidAt])
 }
 
+// todo
+model Todo {
+  id        String  @id @default(cuid())
+  title     String
+  completed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Feturistic tables
 model Income {
   id         String   @id @default(cuid())
   projectId  String

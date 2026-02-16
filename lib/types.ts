@@ -5,7 +5,6 @@ export type ProjectStatus = "PENDING" | "ACTIVE" | "PAUSED" | "COMPLETED" | "CAN
 export type WorkerType = "PERMANENT" | "TEMPORARY"
 export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
 export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "MOBILE_PAYMENT" | "CHECK" | "OTHER"
-export type PayeeType = "LABORER" | "SUPERVISOR" | "SUPPLIER" | "OTHER"
 export type RequestType = "MATERIAL" | "LABOR" | "OTHER"
 
 export interface User {
@@ -439,4 +438,28 @@ export interface SupplierResponseDTO {
     company?: string | null
     isActive: boolean
     createdAt: Date
+}
+
+//  payment DTO
+export interface PayeeSelectionDTO {
+    id: string
+    name: string
+}
+
+export const PAYEE_TYPES = [
+    "LABORER",
+    "SUPERVISOR",
+    "SUPPLIER"
+] as const
+
+export type PayeeType = typeof PAYEE_TYPES[number]
+
+// todo
+// Todo Type
+export interface Todo {
+    id: string
+    title: string
+    completed: boolean
+    createdAt: Date
+    updatedAt: Date
 }

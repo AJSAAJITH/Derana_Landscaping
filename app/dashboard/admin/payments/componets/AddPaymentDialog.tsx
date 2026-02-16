@@ -4,11 +4,27 @@ import { useState } from "react"
 import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+
+import { PAYEE_TYPES, PayeeType } from "@/lib/types"
+import { getPayeesByTypeAction } from "@/app/actions/admin/payment.action"
 
 interface ProjectOption {
     id: string
@@ -17,22 +33,44 @@ interface ProjectOption {
 
 interface AddPaymentDialogProps {
     projects: ProjectOption[]
-    payeeTypes: string[]
     onSubmit?: (data: any) => void
 }
 
 export default function AddPaymentDialog({
     projects,
-    payeeTypes,
     onSubmit,
 }: AddPaymentDialogProps) {
-    const [open, setOpen] = useState(false);
-    const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+    const [open, setOpen] = useState(false)
+
+    const [selectedProjectId, setSelectedProjectId] = useState<string>("")
+
+    const [selectedPayeeType, setSelectedPayeeType] =
+        useState<PayeeType | "">("")
+
+    const [payees, setPayees] = useState<{ id: string; name: string }[]>([])
+    const [selectedPayeeId, setSelectedPayeeId] = useState<string>("")
+
+    const handlePayeeTypeChange = async (value: PayeeType) => {
+        setSelectedPayeeType(value)
+        setSelectedPayeeId("")
+        setPayees([])
+
+        const result = await getPayeesByTypeAction(value)
+
+        if (result.success && result.data) {
+            setPayees(result.data)
+        } else {
+            setPayees([])
+        }
+    }
 
     const handleSubmit = () => {
-        // Later we replace this with real form submission / server action
         if (onSubmit) {
-            onSubmit({})
+            onSubmit({
+                projectId: selectedProjectId,
+                payeeType: selectedPayeeType,
+                payeeId: selectedPayeeId,
+            })
         }
 
         setOpen(false)
@@ -85,26 +123,56 @@ export default function AddPaymentDialog({
                         </Select>
                     </div>
 
+                    <div className="w-full grid gap-2">
+                        <Label>Payee Type</Label>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="payee-type">Payee Type</Label>
-                        <Select>
-                            <SelectTrigger id="payee-type">
+                        <Select
+                            value={selectedPayeeType}
+                            onValueChange={(val) =>
+                                handlePayeeTypeChange(val as PayeeType)
+                            }
+                        >
+                            <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
-                            <SelectContent>
-                                {payeeTypes.map((type) => (
+
+                            <SelectContent className="w-full">
+                                {PAYEE_TYPES.map((type) => (
                                     <SelectItem key={type} value={type}>
-                                        {type}
+                                        {type.charAt(0) +
+                                            type.slice(1).toLowerCase()}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="payee-name">Payee Name</Label>
-                        <Input id="payee-name" placeholder="Enter payee name" />
+                    <div className="w-full grid gap-2">
+                        <Label>Payee Name</Label>
+
+                        <Select
+                            value={selectedPayeeId}
+                            onValueChange={setSelectedPayeeId}
+                            disabled={!selectedPayeeType}
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue
+                                    placeholder={
+                                        selectedPayeeType
+                                            ? "Select payee"
+                                            : "Select payee type first"
+                                    }
+                                />
+                            </SelectTrigger>
+
+                            <SelectContent className="w-full">
+                                {payees.map((payee) => (
+                                    <SelectItem key={payee.id} value={payee.id}>
+                                        {payee.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="grid gap-2">
@@ -113,19 +181,21 @@ export default function AddPaymentDialog({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="payment-method">Payment Method</Label>
+                        <Label htmlFor="payment-method">
+                            Payment Method
+                        </Label>
                         <Select>
                             <SelectTrigger id="payment-method">
                                 <SelectValue placeholder="Select method" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Bank Transfer">
+                                <SelectItem value="BANK_TRANSFER">
                                     Bank Transfer
                                 </SelectItem>
-                                <SelectItem value="Check">
+                                <SelectItem value="CHECK">
                                     Check
                                 </SelectItem>
-                                <SelectItem value="Cash">
+                                <SelectItem value="CASH">
                                     Cash
                                 </SelectItem>
                             </SelectContent>
@@ -139,7 +209,10 @@ export default function AddPaymentDialog({
 
                     <div className="grid gap-2">
                         <Label htmlFor="note">Note (Optional)</Label>
-                        <Textarea id="note" placeholder="Additional notes" />
+                        <Textarea
+                            id="note"
+                            placeholder="Additional notes"
+                        />
                     </div>
 
                     <Button
