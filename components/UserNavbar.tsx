@@ -18,7 +18,6 @@ function UserNavBar() {
             <SidebarTrigger />
             {/* Right */}
             <div className='flex items-center gap-4'>
-                <Link href="/dashboard/admin">Dashboard</Link>
                 {/* Theme Menu */}
                 <ModeToggle />
                 {/* Acount Menu */}
@@ -30,16 +29,6 @@ function UserNavBar() {
                         </Avatar>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent sideOffset={10}>
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                            <User className='h-[1.2rem] w-[1.2rem] mr-2' />
-                            Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            <Settings className='h-[1.2rem] w-[1.2rem] mr-2' />
-                            Settings
-                        </DropdownMenuItem>
                         <DropdownMenuItem variant='destructive' onClick={() => signOut({ redirectUrl: "/" })}>
                             <LogOut className='h-[1.2rem] w-[1.2rem] mr-2' />
                             Logout

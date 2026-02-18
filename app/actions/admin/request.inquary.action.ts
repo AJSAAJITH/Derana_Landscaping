@@ -276,3 +276,100 @@ export async function getPendingRequestStats(): Promise<
         };
     }
 }
+
+// Admin dashboard (Pending labor request)
+export async function getPendingLaborRequests(): Promise<
+    ActionResult<AdminRequestManagmentDTO[]>
+> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const requests = await prisma.requestManagement.findMany({
+            where: {
+                status: "PENDING",
+                type: "LABOR",
+            },
+            include: {
+                supervisor: {
+                    select: { id: true, name: true, email: true },
+                },
+                project: {
+                    select: { id: true, name: true },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        return {
+            success: true,
+            data: requests.map((r) => ({
+                id: r.id,
+                type: r.type,
+                status: r.status,
+                superVisorNote: r.supervisorNote,
+                adminNote: r.adminNote,
+                createdAt: r.createdAt.toISOString(),
+                updatedAt: r.updatedAt.toISOString(),
+                supervisor: r.supervisor,
+                project: r.project,
+            })),
+        };
+    } catch (error) {
+        console.error("Pending Labor Request Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load labor requests",
+        };
+    }
+}
+
+// pending meterial
+export async function getPendingMaterialRequests(): Promise<
+    ActionResult<AdminRequestManagmentDTO[]>
+> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const requests = await prisma.requestManagement.findMany({
+            where: {
+                status: "PENDING",
+                type: "MATERIAL",
+            },
+            include: {
+                supervisor: {
+                    select: { id: true, name: true, email: true },
+                },
+                project: {
+                    select: { id: true, name: true },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        return {
+            success: true,
+            data: requests.map((r) => ({
+                id: r.id,
+                type: r.type,
+                status: r.status,
+                superVisorNote: r.supervisorNote,
+                adminNote: r.adminNote,
+                createdAt: r.createdAt.toISOString(),
+                updatedAt: r.updatedAt.toISOString(),
+                supervisor: r.supervisor,
+                project: r.project,
+            })),
+        };
+    } catch (error) {
+        console.error("Pending Material Request Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load material requests",
+        };
+    }
+}
+

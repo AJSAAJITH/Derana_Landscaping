@@ -1,11 +1,27 @@
-import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Users } from 'lucide-react'
-import { Badge } from './ui/badge'
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Users } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { getPendingLaborRequests } from "@/app/actions/admin/request.inquary.action";
 
 function LabourRequest() {
-    return (
+    const [requests, setRequests] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+        async function load() {
+            const res = await getPendingLaborRequests();
+            if (res.success && res.data) {
+                setRequests(res.data);
+            }
+            setLoading(false);
+        }
+        load();
+    }, []);
+
+    return (
         <Card className="border-border shadow-sm border-purple-200 dark:border-purple-800">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -15,68 +31,52 @@ function LabourRequest() {
                 <CardDescription>Awaiting admin approval</CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-3 max-h-[240px] overflow-y-auto  scroll-smooth scrollbar-hide">
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                    <div>
-                        <p className="font-medium">John Silva</p>
-                        <p className="text-sm text-muted-foreground">
-                            Requesting 5 additional laborers (3 days)
-                        </p>
-                    </div>
-                    <Badge className="bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        Pending
-                    </Badge>
-                </div>
+            <CardContent className="space-y-3 max-h-[240px] overflow-y-auto scroll-smooth scrollbar-hide">
 
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                    <div>
-                        <p className="font-medium">Rajesh Kumar</p>
-                        <p className="text-sm text-muted-foreground">
-                            Requesting 2 skilled workers (land leveling)
-                        </p>
+                {/* 🔄 Loading State */}
+                {loading && (
+                    <div className="space-y-3">
+                        <div className="h-16 rounded-lg bg-muted animate-pulse" />
+                        <div className="h-16 rounded-lg bg-muted animate-pulse" />
                     </div>
-                    <Badge className="bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        Pending
-                    </Badge>
-                </div>
+                )}
 
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                    <div>
-                        <p className="font-medium">Maria Perera</p>
-                        <p className="text-sm text-muted-foreground">
-                            Requesting 4 gardeners (planting phase)
-                        </p>
+                {/* 📭 Empty State */}
+                {!loading && requests.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-6">
+                        No pending labor requests 🎉
                     </div>
-                    <Badge className="bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        Pending
-                    </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                    <div>
-                        <p className="font-medium">Maria Perera</p>
-                        <p className="text-sm text-muted-foreground">
-                            Requesting 4 gardeners (planting phase)
-                        </p>
-                    </div>
-                    <Badge className="bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        Pending
-                    </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                    <div>
-                        <p className="font-medium">Maria Perera</p>
-                        <p className="text-sm text-muted-foreground">
-                            Requesting 4 gardeners (planting phase)
-                        </p>
-                    </div>
-                    <Badge className="bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        Pending
-                    </Badge>
-                </div>
+                )}
+
+                {/* 📋 Data */}
+                {!loading &&
+                    requests.map((req) => (
+                        <div
+                            key={req.id}
+                            className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950 rounded-lg"
+                        >
+                            <div>
+                                <p className="font-medium">
+                                    {req.supervisor.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Project: {req.project.name}
+                                </p>
+                                {req.superVisorNote && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Note: {req.superVisorNote}
+                                    </p>
+                                )}
+                            </div>
+
+                            <Badge className="bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                Pending
+                            </Badge>
+                        </div>
+                    ))}
             </CardContent>
         </Card>
-
-    )
+    );
 }
 
-export default LabourRequest
+export default LabourRequest;

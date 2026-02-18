@@ -423,3 +423,36 @@ export async function getActiveProjectsStats(): Promise<
         };
     }
 }
+
+// dashboard (Pie chart)
+export interface ProjectStatusCountDTO {
+    status: ProjectStatus;
+    value: number;
+}
+export async function getProjectStatusCounts(): Promise<
+    ActionResult<ProjectStatusCountDTO[]>
+> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const projects = await prisma.project.groupBy({
+            by: ["status"],
+            _count: { status: true },
+        });
+
+        const counts: ProjectStatusCountDTO[] = projects.map((p) => ({
+            status: p.status,
+            value: p._count.status,
+        }));
+
+        return { success: true, data: counts };
+    } catch (error) {
+        console.error("Failed to get project status counts", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load project status data",
+        };
+    }
+}

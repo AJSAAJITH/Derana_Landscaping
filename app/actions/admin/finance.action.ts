@@ -235,3 +235,70 @@ export async function getProjectFinanceSummary(
         }
     }
 }
+
+// admin (Dashboard) Line Chart
+
+export async function getLast6MonthsIncomeExpense(): Promise<
+    ActionResult<MonthlyChartDTO[]>
+> {
+    try {
+        const { user } = await getAuthUser()
+        requireRole(user, ["SUPER_ADMIN", "SUPERVISOR"])
+
+        const now = new Date()
+        const months: MonthlyChartDTO[] = []
+
+        for (let i = 5; i >= 0; i--) {
+            const start = new Date(now.getFullYear(), now.getMonth() - i, 1)
+            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+
+            // Total income = sum of project budgets created in that month
+            const projects = await prisma.project.findMany({
+                where: {
+                    createdAt: {
+                        gte: start,
+                        lt: end,
+                    },
+                },
+                select: {
+                    budget: true,
+                },
+            })
+
+            const income = projects.reduce((sum, p) => sum + Number(p.budget || 0), 0)
+
+            // Total expenses = sum of payments made in that month
+            const payments = await prisma.payment.findMany({
+                where: {
+                    paidAt: {
+                        gte: start,
+                        lt: end,
+                    },
+                },
+                select: {
+                    amount: true,
+                },
+            })
+
+            const expenses = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+
+            months.push({
+                month: start.toLocaleString("default", { month: "short" }),
+                income,
+                expenses,
+            })
+        }
+
+        return {
+            success: true,
+            data: months,
+        }
+    } catch (error) {
+        console.error("getLast6MonthsIncomeExpense Error:", error)
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load monthly finance data",
+        }
+    }
+}
