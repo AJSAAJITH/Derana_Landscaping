@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -7,36 +8,37 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Send } from "lucide-react"
-import { useState } from "react"
-import { DailyReport } from "@/lib/types";
 
 interface Props {
-    onSubmit: (report: DailyReport) => void
+    onSubmit: (data: { weather: string; notes: string }) => void
     onCancel: () => void
+    isLoading?: boolean
 }
 
-export function DailyReportForm({ onSubmit, onCancel }: Props) {
+export function DailyReportForm({
+    onSubmit,
+    onCancel,
+    isLoading,
+
+}: Props) {
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().split("T")[0],
         weather: "sunny",
         notes: "",
     })
 
+    const today = new Date().toISOString().split("T")[0]
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!formData.notes) return
+        if (!formData.notes.trim()) return
 
         onSubmit({
-            id: crypto.randomUUID(),
-            date: formData.date,
-            status: "submitted",
             weather: formData.weather,
             notes: formData.notes,
         })
 
         setFormData({
-            date: new Date().toISOString().split("T")[0],
             weather: "sunny",
             notes: "",
         })
@@ -55,23 +57,23 @@ export function DailyReportForm({ onSubmit, onCancel }: Props) {
                 <form onSubmit={handleSubmit} className="space-y-6">
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                         <div className="space-y-2">
                             <Label>Date</Label>
                             <Input
                                 type="date"
-                                value={formData.date}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, date: e.target.value })
-                                }
+                                value={today}
+                                disabled
+                                className="bg-muted cursor-not-allowed"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Weather Conditions</Label>
+                            <Label>Weather</Label>
                             <Select
                                 value={formData.weather}
                                 onValueChange={(value) =>
-                                    setFormData({ ...formData, weather: value })
+                                    setFormData((prev) => ({ ...prev, weather: value }))
                                 }
                             >
                                 <SelectTrigger>
@@ -91,10 +93,9 @@ export function DailyReportForm({ onSubmit, onCancel }: Props) {
                     <div className="space-y-2">
                         <Label>Daily Notes</Label>
                         <Textarea
-                            placeholder="Describe the day's work..."
                             value={formData.notes}
                             onChange={(e) =>
-                                setFormData({ ...formData, notes: e.target.value })
+                                setFormData((prev) => ({ ...prev, notes: e.target.value }))
                             }
                             className="min-h-32"
                             required
@@ -102,13 +103,22 @@ export function DailyReportForm({ onSubmit, onCancel }: Props) {
                     </div>
 
                     <div className="flex gap-2 justify-end pt-4 border-t">
-                        <Button type="button" variant="outline" onClick={onCancel}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onCancel}
+                            disabled={isLoading}
+                        >
                             Cancel
                         </Button>
 
-                        <Button type="submit" className="bg-green-600 hover:bg-green-700 gap-2">
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="bg-green-600 hover:bg-green-700 gap-2"
+                        >
                             <Send className="w-4 h-4" />
-                            Submit Report
+                            {isLoading ? "Submitting..." : "Submit Report"}
                         </Button>
                     </div>
 

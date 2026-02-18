@@ -1,9 +1,10 @@
 import React from 'react'
 import DailyReportsPage from './dailyReport.client'
 
-function DailyReport() {
+async function DailyReport({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     return (
-        <DailyReportsPage />
+        <DailyReportsPage projectId={id} />
     )
 }
 

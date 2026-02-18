@@ -11,22 +11,24 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ClipboardList, Calendar } from "lucide-react"
+import { ProjectDailyReportDTO } from "@/lib/types"
 
-type DailyUpdate = {
-    id: string
-    date: string
-    weather: string
-    workCompleted: string
-    workPlanned: string
-    issues: string
-    supervisor: string
-    photos: number
+function getWeatherLabel(weather: string) {
+    const labels: Record<string, string> = {
+        sunny: "☀️ Sunny",
+        cloudy: "☁️ Cloudy",
+        rainy: "🌧️ Rainy",
+        windy: "💨 Windy",
+        hot: "🔥 Hot",
+    }
+
+    return labels[weather] || weather
 }
 
 export function ProjectDailyUpdates({
     updates,
 }: {
-    updates: DailyUpdate[]
+    updates: ProjectDailyReportDTO[]
 }) {
     return (
         <Dialog>
@@ -47,6 +49,11 @@ export function ProjectDailyUpdates({
                 </DialogHeader>
 
                 <div className="space-y-4">
+                    {updates.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-6">
+                            No daily reports available for this project.
+                        </p>
+                    )}
                     {updates.map((u) => (
                         <div
                             key={u.id}
@@ -55,39 +62,31 @@ export function ProjectDailyUpdates({
                             <div className="flex justify-between items-center">
                                 <h4 className="font-semibold flex items-center gap-2">
                                     <Calendar className="w-4 h-4 text-purple-600" />
-                                    {new Date(u.date).toLocaleDateString()}
+                                    {new Date(u.createdAt).toLocaleDateString()}
                                 </h4>
-                                <Badge variant="outline">{u.weather}</Badge>
+                                <Badge variant="outline">
+                                    {u.weather ? getWeatherLabel(u.weather) : "N/A"}
+                                </Badge>
                             </div>
 
                             <div className="grid sm:grid-cols-2 gap-3 text-sm">
                                 <div>
                                     <p className="text-xs uppercase text-muted-foreground">
-                                        Work Completed
+                                        Supervisor
                                     </p>
-                                    <p>{u.workCompleted}</p>
+                                    {/* supervisr name need */}
+                                    <p>{u.supervisorName}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs uppercase text-muted-foreground">
-                                        Work Planned
-                                    </p>
-                                    <p>{u.workPlanned}</p>
                                 </div>
                             </div>
 
                             <div className="flex justify-between pt-2 border-t text-sm">
-                                <div>
-                                    <p className="text-xs uppercase text-muted-foreground">Issues</p>
-                                    <p className="text-red-600 font-medium">{u.issues}</p>
-                                </div>
+
                                 <div className="flex gap-4">
                                     <div>
-                                        <p className="text-xs uppercase text-muted-foreground">Supervisor</p>
-                                        <p>{u.supervisor}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs uppercase text-muted-foreground">Photos</p>
-                                        <p>{u.photos}</p>
+                                        <p className="text-xs uppercase text-muted-foreground">Work Note</p>
+                                        <p>{u.note}</p>
                                     </div>
                                 </div>
                             </div>

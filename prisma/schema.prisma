@@ -86,7 +86,7 @@ model User {
   assignedProjects Project[] @relation("SupervisorProjects")
   paymentsMade     Payment[] @relation("PaymentsMadeBy")
 
-  supervisorPayments Payment[] // ✅ FIX 3
+  supervisorPayments Payment[]
 
   dailyReports          DailyReport[]
   attendances           Attendance[]

@@ -26,15 +26,11 @@ export function DailyReportCard({ report }: Props) {
             <CardHeader>
                 <div className="flex items-start justify-between">
                     <div>
-                        <CardTitle className="text-lg">{report.date}</CardTitle>
+                        <CardTitle className="text-lg">{report.createdAt}</CardTitle>
                         <CardDescription className="mt-1">
-                            {getWeatherLabel(report.weather)}
+                            {getWeatherLabel(report.weather ?? "unknown")}
                         </CardDescription>
                     </div>
-
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        {report.status === "submitted" ? "Submitted" : "Draft"}
-                    </Badge>
                 </div>
             </CardHeader>
 
@@ -43,7 +39,7 @@ export function DailyReportCard({ report }: Props) {
                     <p className="text-sm text-muted-foreground mb-2 font-medium">
                         Notes
                     </p>
-                    <p>{report.notes}</p>
+                    <p>{report.note ?? "No notes provided"}</p>
                 </div>
             </CardContent>
         </Card>

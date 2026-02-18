@@ -6,7 +6,7 @@ import { ArrowLeft, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-import { Project } from "@/lib/types"
+import { Project, ProjectDailyReportDTO } from "@/lib/types"
 import { getProjectByid, updateProjectDates } from "@/app/actions/admin/project.action"
 import { toast } from "react-toastify"
 
@@ -19,6 +19,7 @@ import { ProjectMaterialRequests } from "./components/ProjectMeterialRequest"
 import { ProjectFinancialSummary } from "./components/ProjectFinancialSummary"
 import { ProjectSummaryCard } from "./components/ProjectSummeryCard"
 import { getProjectInventoryOverview, ProjectInventoryOverviewItem } from "@/app/actions/admin/inventory.action"
+import { getProjectDailyReports } from "@/app/actions/admin/daily.report.action"
 
 
 const mockFinancials = {
@@ -29,20 +30,6 @@ const mockFinancials = {
     expense: 162500,
 }
 
-const mockDailyUpdates = [
-    {
-        id: "1",
-        date: "2024-01-25",
-        weather: "Sunny",
-        workCompleted: "Completed ground leveling",
-        workPlanned: "Install irrigation",
-        issues: "None",
-        supervisor: "John Silva",
-        photos: 3,
-    },
-]
-
-
 export default function ProjectDetailsPage({ projectId }: { projectId: string }) {
     const [project, setProject] = useState<Project | null>(null)
     const [loading, setLoading] = useState(true)
@@ -50,8 +37,30 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
     const [endDate, setEndDate] = useState<Date | undefined>()
     const [editingDates, setEditingDates] = useState(false)
     const [savingDates, setSavingDates] = useState(false)
-    const [inventory, setInventory] = useState<ProjectInventoryOverviewItem[]>([]);
 
+
+    // for deily report update
+    const [dailyUpdates, setDailyUpdates] = useState<ProjectDailyReportDTO[]>([]);
+    const loadDailyUpdates = async () => {
+        console.log("Project ID:", projectId)
+
+        const result = await getProjectDailyReports(projectId)
+
+        console.log("Daily report result:", result)
+
+        if (!result.success || !result.data) {
+            toast.error(result.message ?? "Failed to load daily updates");
+            return
+        }
+
+        console.log("Loaded reports:", result.data.length)
+
+        setDailyUpdates(result.data)
+    }
+
+
+    // Inventory
+    const [inventory, setInventory] = useState<ProjectInventoryOverviewItem[]>([]);
     const loadInventory = async () => {
         const result = await getProjectInventoryOverview(projectId);
         if (!result.success) {
@@ -80,6 +89,7 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
     useEffect(() => {
         loadProject()
         loadInventory();
+        loadDailyUpdates();
     }, [projectId])
 
     const handleUpdateDates = async () => {
@@ -139,7 +149,7 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
                         <span className="sm:hidden">Overview</span>
                     </Button>
                 </Link>
-                <ProjectDailyUpdates updates={mockDailyUpdates} />
+                <ProjectDailyUpdates updates={dailyUpdates} />
             </div>
 
             {/* OTHER SECTIONS */}

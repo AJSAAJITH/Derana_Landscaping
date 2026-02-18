@@ -503,10 +503,28 @@ export interface ExpenseCategoryDTO {
 }
 
 // Daily reports
+export interface CreateDailyReportDTO {
+    projectId: string
+    note: string | null
+    weather: string | null
+    createdAt: string
+}
+
+// full report type 
 export interface DailyReport {
     id: string
-    date: string
-    status: "draft" | "submitted"
-    weather: string
-    notes: string
+    projectId: string
+    supervisorId: string
+    note: string | null
+    weather: string | null
+    createdAt: string
 }
+
+export type ProjectDailyReportDTO = {
+    id: string
+    note: string | null
+    weather: string | null
+    createdAt: string
+    supervisorName: string
+}
+
