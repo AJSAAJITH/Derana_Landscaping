@@ -265,18 +265,6 @@ export interface DailyReportPhoto {
     caption?: string | null
 }
 
-export interface DailyReport {
-    id: string
-    projectId: string
-    supervisorId: string
-    note?: string | null
-    weather?: string | null
-    createdAt: Date
-    photos: DailyReportPhoto[]
-    supervisor?: User
-    project?: Project
-}
-
 // Payment Type
 export interface Payment {
     id: string
@@ -512,4 +500,13 @@ export interface MonthlyChartDTO {
 export interface ExpenseCategoryDTO {
     name: string
     value: number
+}
+
+// Daily reports
+export interface DailyReport {
+    id: string
+    date: string
+    status: "draft" | "submitted"
+    weather: string
+    notes: string
 }

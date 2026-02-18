@@ -348,24 +348,11 @@ model DailyReport {
   weather      String?
   createdAt    DateTime @default(now())
 
-  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supervisor User               @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-  photos     DailyReportPhoto[]
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supervisor User    @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([supervisorId])
-}
-
-model DailyReportPhoto {
-  id            String   @id @default(cuid())
-  dailyReportId String
-  url           String
-  caption       String?
-  createdAt     DateTime @default(now())
-
-  dailyReport DailyReport @relation(fields: [dailyReportId], references: [id], onDelete: Cascade)
-
-  @@index([dailyReportId])
 }
 
 // Supliers
