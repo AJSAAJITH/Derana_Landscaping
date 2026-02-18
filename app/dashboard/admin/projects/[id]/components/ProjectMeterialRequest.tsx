@@ -49,14 +49,6 @@ export function ProjectMaterialRequests({ projectId }: { projectId: string }) {
                         <CardTitle>Requests Material</CardTitle>
                         <CardDescription>Pending & approved requests</CardDescription>
                     </div>
-                    <div>
-                        <Link href={`/dashboard/admin/requests`}>
-                            <Button className="gap-2 bg-amber-700 hover:bg-amber-900 w-full">
-                                <GitPullRequestArrowIcon className="w-4 h-4" />
-                                Explore Requests
-                            </Button>
-                        </Link>
-                    </div>
                 </div>
             </CardHeader>
 

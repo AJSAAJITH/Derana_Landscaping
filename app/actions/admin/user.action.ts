@@ -300,3 +300,44 @@ export async function deleteSupervisor(supervisorId: string): Promise<ActionResu
     }
 }
 
+// get all supervisors with status
+export async function getSupervisorStats(): Promise<
+    ActionResult<{
+        total: number
+        active: number
+        inactive: number
+    }>
+> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const [total, active] = await Promise.all([
+            prisma.user.count({
+                where: { role: "SUPERVISOR" },
+            }),
+            prisma.user.count({
+                where: {
+                    role: "SUPERVISOR",
+                    isActive: true,
+                },
+            }),
+        ]);
+
+        return {
+            success: true,
+            data: {
+                total,
+                active,
+                inactive: total - active,
+            },
+        };
+    } catch (error) {
+        console.error("Supervisor Stats Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load supervisor stats",
+        };
+    }
+}

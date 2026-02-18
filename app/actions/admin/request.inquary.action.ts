@@ -233,3 +233,46 @@ export async function updateAdminRequestStatus(
         };
     }
 }
+
+// pending request (dashboard)
+export async function getPendingRequestStats(): Promise<
+    ActionResult<{
+        total: number
+        material: number
+        labor: number
+        other: number
+    }>
+> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const total = await prisma.requestManagement.count({
+            where: { status: "PENDING" },
+        });
+
+        const material = await prisma.requestManagement.count({
+            where: { status: "PENDING", type: "MATERIAL" },
+        });
+
+        const labor = await prisma.requestManagement.count({
+            where: { status: "PENDING", type: "LABOR" },
+        });
+
+        const other = await prisma.requestManagement.count({
+            where: { status: "PENDING", type: "OTHER" },
+        });
+
+        return {
+            success: true,
+            data: { total, material, labor, other },
+        };
+    } catch (error) {
+        console.error("Pending Request Stats Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load pending request stats",
+        };
+    }
+}

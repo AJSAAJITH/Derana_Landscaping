@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { getAuthUser } from "@/lib/auth"
 import { requireRole } from "@/lib/rbac"
 import { ActionResult } from "@/lib/action-result"
+import { ProjectFinanceSummaryDTO } from "@/lib/types"
 
 export interface MonthlyChartDTO {
     month: string
@@ -170,6 +171,67 @@ export async function getFinanceDashboardData(): Promise<
             success: false,
             code: "SERVER_ERROR",
             message: "Failed to load finance dashboard",
+        }
+    }
+}
+
+// project finance summery
+export async function getProjectFinanceSummary(
+    projectId: string
+): Promise<ActionResult<ProjectFinanceSummaryDTO>> {
+    try {
+        if (!projectId) {
+            return {
+                success: false,
+                code: "VALIDATION_ERROR",
+                message: "Project ID is required",
+            }
+        }
+
+        const { user } = await getAuthUser()
+        requireRole(user, ["SUPER_ADMIN", "SUPERVISOR"])
+
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            include: {
+                payments: true,
+            },
+        })
+
+        if (!project) {
+            return {
+                success: false,
+                code: "NOT_FOUND",
+                message: "Project not found",
+            }
+        }
+
+        const totalBudget = Number(project.budget || 0)
+
+        const totalExpenses = project.payments.reduce(
+            (sum, p) => sum + Number(p.amount),
+            0
+        )
+
+        const remaining = totalBudget - totalExpenses
+
+        return {
+            success: true,
+            data: {
+                projectId: project.id,
+                projectName: project.name,
+                totalBudget,
+                totalExpenses,
+                remaining,
+                totalPayments: project.payments.length,
+            },
+        }
+    } catch (error) {
+        console.error(error)
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load project finance data",
         }
     }
 }

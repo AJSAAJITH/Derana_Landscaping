@@ -359,3 +359,67 @@ export async function updateProjectDates(
         }
     }
 }
+
+// get project count
+export async function getTotalProjectsCount(): Promise<ActionResult<number>> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const count = await prisma.project.count();
+
+        return {
+            success: true,
+            data: count,
+        };
+    } catch (error) {
+        console.error("Total Project Count Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load total projects count",
+        };
+    }
+}
+
+// get Active projects
+export async function getActiveProjectsStats(): Promise<
+    ActionResult<{
+        active: number
+        total: number
+        percentage: number
+    }>
+> {
+    try {
+        const { user } = await getAuthUser();
+        requireRole(user, ["SUPER_ADMIN"]);
+
+        const [total, active] = await Promise.all([
+            prisma.project.count(),
+            prisma.project.count({
+                where: {
+                    status: "ACTIVE",
+                },
+            }),
+        ]);
+
+        const percentage =
+            total === 0 ? 0 : Math.round((active / total) * 100);
+
+        return {
+            success: true,
+            data: {
+                active,
+                total,
+                percentage,
+            },
+        };
+    } catch (error) {
+        console.error("Active Project Stats Error:", error);
+        return {
+            success: false,
+            code: "SERVER_ERROR",
+            message: "Failed to load active projects stats",
+        };
+    }
+}

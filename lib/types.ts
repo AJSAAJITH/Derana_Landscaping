@@ -469,6 +469,16 @@ export type PaymentDTO = {
     reference: string
 }
 
+// Project dashboad finace view finance Summery
+export interface ProjectFinanceSummaryDTO {
+    projectId: string
+    projectName: string
+    totalBudget: number
+    totalExpenses: number
+    remaining: number
+    totalPayments: number
+}
+
 
 
 // todo

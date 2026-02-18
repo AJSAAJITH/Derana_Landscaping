@@ -6,7 +6,7 @@ import { ArrowLeft, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-import { Project, ProjectDailyReportDTO } from "@/lib/types"
+import { Project, ProjectDailyReportDTO, ProjectFinanceSummaryDTO } from "@/lib/types"
 import { getProjectByid, updateProjectDates } from "@/app/actions/admin/project.action"
 import { toast } from "react-toastify"
 
@@ -20,14 +20,13 @@ import { ProjectFinancialSummary } from "./components/ProjectFinancialSummary"
 import { ProjectSummaryCard } from "./components/ProjectSummeryCard"
 import { getProjectInventoryOverview, ProjectInventoryOverviewItem } from "@/app/actions/admin/inventory.action"
 import { getProjectDailyReports } from "@/app/actions/admin/daily.report.action"
+import { getProjectFinanceSummary } from "@/app/actions/admin/finance.action"
 
 
 const mockFinancials = {
     totalBudget: 250000,
     spent: 162500,
     remaining: 87500,
-    income: 0,
-    expense: 162500,
 }
 
 export default function ProjectDetailsPage({ projectId }: { projectId: string }) {
@@ -38,6 +37,17 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
     const [editingDates, setEditingDates] = useState(false)
     const [savingDates, setSavingDates] = useState(false)
 
+    const [finance, setFinance] = useState<ProjectFinanceSummaryDTO | null>(null);
+    const loadFinance = async () => {
+        const result = await getProjectFinanceSummary(projectId)
+
+        if (!result.success || !result.data) {
+            toast.error(result.message ?? "Failed to load finance data")
+            return
+        }
+
+        setFinance(result.data)
+    }
 
     // for deily report update
     const [dailyUpdates, setDailyUpdates] = useState<ProjectDailyReportDTO[]>([]);
@@ -90,6 +100,7 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
         loadProject()
         loadInventory();
         loadDailyUpdates();
+        loadFinance();
     }, [projectId])
 
     const handleUpdateDates = async () => {
@@ -155,7 +166,17 @@ export default function ProjectDetailsPage({ projectId }: { projectId: string })
             {/* OTHER SECTIONS */}
             <ProjectInventory inventory={inventory} projectId={projectId} />
             <ProjectMaterialRequests projectId={projectId} />
-            <ProjectFinancialSummary financials={mockFinancials} />
+
+            {finance && (
+                <ProjectFinancialSummary
+                    financials={{
+                        totalBudget: finance.totalBudget,
+                        spent: finance.totalExpenses,
+                        remaining: finance.remaining,
+                    }}
+                />
+            )}
+
         </div>
     )
 }
