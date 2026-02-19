@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { ProjectInventorItemDTO, ProjectInventory } from "@/lib/types"
+import type { ProjectInventorItemDTO } from "@/lib/types"
 
 interface InventoryStatsProps {
     items: ProjectInventorItemDTO[]

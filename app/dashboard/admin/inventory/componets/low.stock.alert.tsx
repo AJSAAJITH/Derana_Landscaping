@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { ProjectInventorItemDTO, ProjectInventory } from "@/lib/types"
+import type { ProjectInventorItemDTO } from "@/lib/types"
 
 interface LowStockAlertProps {
     items: ProjectInventorItemDTO[]

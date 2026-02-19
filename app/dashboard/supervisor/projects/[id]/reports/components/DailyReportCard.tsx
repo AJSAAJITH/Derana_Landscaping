@@ -26,7 +26,7 @@ export function DailyReportCard({ report }: Props) {
             <CardHeader>
                 <div className="flex items-start justify-between">
                     <div>
-                        <CardTitle className="text-lg">{report.createdAt}</CardTitle>
+                        <CardTitle className="text-lg">{new Date(report.createdAt).toLocaleDateString()}</CardTitle>
                         <CardDescription className="mt-1">
                             {getWeatherLabel(report.weather ?? "unknown")}
                         </CardDescription>
